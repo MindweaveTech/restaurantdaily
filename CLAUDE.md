@@ -184,3 +184,57 @@ Use scripts in `/Users/grao/Projects/MindWeave/Keycloak/scripts/`:
 - Vite proxy handles CORS for local Odoo JSON-RPC calls
 - Super admin has no tenant_id (null) - sees admin portal
 - Tenant users have tenant_id from JWT - see tenant portal
+
+---
+
+## Session Status (2026-01-14)
+
+### Completed
+- [x] Keycloak multi-tenant auth with single realm + groups
+- [x] Role-based routing (super-admin → admin portal, tenant users → tenant portal)
+- [x] Admin portal UI (violet theme): Dashboard, Tenants, Usage, Billing, Communications
+- [x] Tenant portal UI (blue theme): Dashboard, Sales, Expenses, Staff
+- [x] GitHub repo: https://github.com/MindweaveTech/restaurantdaily (old Next.js code backed up to `nextjs-legacy` branch)
+- [x] Frontend built and deployed to server at `/home/grao/Projects/RestaurantDaily/frontend/dist/`
+- [x] Docker container created on server (port 3010)
+- [x] Security review completed
+
+### Pending Tasks
+
+1. **Enable nginx** (requires sudo on server):
+   ```bash
+   ssh mindweavehq
+   sudo cp /home/grao/Developer/nginx-configs/restaurantdaily.mindweave.tech /etc/nginx/sites-available/
+   sudo ln -sf /etc/nginx/sites-available/restaurantdaily.mindweave.tech /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+2. **Fix security issues before production**:
+
+   | Issue | File | Fix |
+   |-------|------|-----|
+   | Hardcoded `admin/admin` | `frontend/src/api/odoo.ts:8-9` | Use env vars or remove dev fallback |
+   | Default DB password `odoo/odoo` | `docker-compose.yml:19,28` | Use strong password |
+   | Default admin password | `odoo.conf:4` | Change `admin_passwd` |
+   | Debug console.log | `frontend/src/pages/admin/Tenants.tsx:186` | Remove before production |
+
+3. **Wire up admin pages to Keycloak API**:
+   - `Tenants.tsx` - CRUD via Keycloak Admin API
+   - `Usage.tsx` - Placeholder needs data
+   - `Billing.tsx` - Placeholder needs data
+   - `Communications.tsx` - Placeholder needs data
+
+### To Resume Development
+
+```bash
+# Start local services
+cd /Users/grao/Projects/MindWeave/RestaurantDaily
+docker-compose up -d        # Odoo backend
+
+cd frontend
+npm run dev                 # Frontend at http://localhost:5173
+
+# Test logins
+# Super Admin: admin / admin123 → sees /admin portal
+# Tenant Owner: owner.grkitchens / owner123 → sees tenant portal
+```

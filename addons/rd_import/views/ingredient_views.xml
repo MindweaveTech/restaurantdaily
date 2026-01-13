@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ingredient Tree View -->
+    <record id="view_rd_ingredient_tree" model="ir.ui.view">
+        <field name="name">rd.ingredient.tree</field>
+        <field name="model">rd.ingredient</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="category"/>
+                <field name="uom"/>
+                <field name="current_price"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Ingredient Form View -->
+    <record id="view_rd_ingredient_form" model="ir.ui.view">
+        <field name="name">rd.ingredient.form</field>
+        <field name="model">rd.ingredient</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="category"/>
+                        </group>
+                        <group>
+                            <field name="uom"/>
+                            <field name="current_price"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Price History">
+                            <field name="price_ids">
+                                <tree editable="bottom">
+                                    <field name="year"/>
+                                    <field name="month"/>
+                                    <field name="rate"/>
+                                    <field name="store"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Ingredient Action -->
+    <record id="action_rd_ingredient" model="ir.actions.act_window">
+        <field name="name">Ingredients</field>
+        <field name="res_model">rd.ingredient</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_rd_ingredient"
+              name="Ingredients"
+              parent="menu_rd_inventory"
+              action="action_rd_ingredient"
+              sequence="10"/>
+</odoo>

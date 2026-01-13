@@ -1,0 +1,40 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Credentials (NEVER commit)
+**/gr-kitchens-*.json
+**/*credentials*.json
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Tenant data (large files)
+tenants/*/data/
+tenants/*/exports/
+tenants/*/data_profile.json
+
+# Playwright
+.playwright-mcp/
+
+# Environment
+.env
+.env.local
+.claude/

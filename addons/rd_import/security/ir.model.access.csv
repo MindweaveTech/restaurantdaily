@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_rd_ingredient,rd.ingredient.all,model_rd_ingredient,,1,1,1,1
+access_rd_ingredient_price,rd.ingredient.price.all,model_rd_ingredient_price,,1,1,1,1
+access_rd_employee,rd.employee.all,model_rd_employee,,1,1,1,1
+access_rd_attendance,rd.attendance.all,model_rd_attendance,,1,1,1,1
+access_rd_expense,rd.expense.all,model_rd_expense,,1,1,1,1
+access_rd_daily_sales,rd.daily.sales.all,model_rd_daily_sales,,1,1,1,1
+access_rd_monthly_sales,rd.monthly.sales.all,model_rd_monthly_sales,,1,1,1,1

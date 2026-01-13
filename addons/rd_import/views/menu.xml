@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_rd_root"
+              name="Restaurant Daily"
+              sequence="10"/>
+
+    <!-- Submenus -->
+    <menuitem id="menu_rd_sales"
+              name="Sales"
+              parent="menu_rd_root"
+              sequence="10"/>
+
+    <menuitem id="menu_rd_inventory"
+              name="Inventory"
+              parent="menu_rd_root"
+              sequence="20"/>
+
+    <menuitem id="menu_rd_staff"
+              name="Staff"
+              parent="menu_rd_root"
+              sequence="30"/>
+
+    <menuitem id="menu_rd_expenses"
+              name="Expenses"
+              parent="menu_rd_root"
+              sequence="40"/>
+</odoo>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Expense Tree View -->
+    <record id="view_rd_expense_tree" model="ir.ui.view">
+        <field name="name">rd.expense.tree</field>
+        <field name="model">rd.expense</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="date"/>
+                <field name="pcv_number"/>
+                <field name="description"/>
+                <field name="category"/>
+                <field name="amount" sum="Total"/>
+                <field name="store"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Expense Form View -->
+    <record id="view_rd_expense_form" model="ir.ui.view">
+        <field name="name">rd.expense.form</field>
+        <field name="model">rd.expense</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date"/>
+                            <field name="pcv_number"/>
+                            <field name="category"/>
+                        </group>
+                        <group>
+                            <field name="amount"/>
+                            <field name="store"/>
+                            <field name="year"/>
+                            <field name="month"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Expense Action -->
+    <record id="action_rd_expense" model="ir.actions.act_window">
+        <field name="name">Expenses (PCV)</field>
+        <field name="res_model">rd.expense</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_rd_expense"
+              name="Petty Cash (PCV)"
+              parent="menu_rd_expenses"
+              action="action_rd_expense"
+              sequence="10"/>
+</odoo>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Daily Sales Tree View -->
+    <record id="view_rd_daily_sales_tree" model="ir.ui.view">
+        <field name="name">rd.daily.sales.tree</field>
+        <field name="model">rd.daily.sales</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="date"/>
+                <field name="day_name"/>
+                <field name="net_sales" sum="Total"/>
+                <field name="total_orders" sum="Total"/>
+                <field name="delivery_sales"/>
+                <field name="dine_in_sales"/>
+                <field name="takeaway_sales"/>
+                <field name="basket_per_order"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Daily Sales Form View -->
+    <record id="view_rd_daily_sales_form" model="ir.ui.view">
+        <field name="name">rd.daily.sales.form</field>
+        <field name="model">rd.daily.sales</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group string="Date Info">
+                            <field name="date"/>
+                            <field name="day_name"/>
+                            <field name="store"/>
+                        </group>
+                        <group string="Totals">
+                            <field name="net_sales"/>
+                            <field name="gross_sales"/>
+                            <field name="total_orders"/>
+                            <field name="basket_per_order"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Delivery">
+                            <field name="delivery_sales"/>
+                            <field name="delivery_orders"/>
+                        </group>
+                        <group string="Dine-In">
+                            <field name="dine_in_sales"/>
+                            <field name="dine_in_orders"/>
+                        </group>
+                        <group string="Takeaway">
+                            <field name="takeaway_sales"/>
+                            <field name="takeaway_orders"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Daily Sales Action -->
+    <record id="action_rd_daily_sales" model="ir.actions.act_window">
+        <field name="name">Daily Sales</field>
+        <field name="res_model">rd.daily.sales</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_rd_daily_sales"
+              name="Daily Sales"
+              parent="menu_rd_sales"
+              action="action_rd_daily_sales"
+              sequence="10"/>
+</odoo>

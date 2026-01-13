@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Employee Tree View -->
+    <record id="view_rd_employee_tree" model="ir.ui.view">
+        <field name="name">rd.employee.tree</field>
+        <field name="model">rd.employee</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="role_code"/>
+                <field name="phone"/>
+                <field name="store"/>
+                <field name="base_salary"/>
+                <field name="join_date"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Employee Form View -->
+    <record id="view_rd_employee_form" model="ir.ui.view">
+        <field name="name">rd.employee.form</field>
+        <field name="model">rd.employee</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group string="Basic Info">
+                            <field name="name"/>
+                            <field name="phone"/>
+                            <field name="store"/>
+                            <field name="role_code"/>
+                            <field name="base_salary"/>
+                        </group>
+                        <group string="Dates">
+                            <field name="dob"/>
+                            <field name="join_date"/>
+                            <field name="father_name"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Bank Details">
+                            <field name="bank_name"/>
+                            <field name="account_no"/>
+                            <field name="ifsc"/>
+                        </group>
+                        <group string="ID Documents">
+                            <field name="pan"/>
+                            <field name="aadhaar"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Attendance History">
+                            <field name="attendance_ids">
+                                <tree>
+                                    <field name="year"/>
+                                    <field name="month"/>
+                                    <field name="present_days"/>
+                                    <field name="weekly_off"/>
+                                    <field name="absent_days"/>
+                                    <field name="paid_salary"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Employee Action -->
+    <record id="action_rd_employee" model="ir.actions.act_window">
+        <field name="name">Employees</field>
+        <field name="res_model">rd.employee</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Attendance Tree View -->
+    <record id="view_rd_attendance_tree" model="ir.ui.view">
+        <field name="name">rd.attendance.tree</field>
+        <field name="model">rd.attendance</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="employee_id"/>
+                <field name="year"/>
+                <field name="month"/>
+                <field name="present_days"/>
+                <field name="weekly_off"/>
+                <field name="absent_days"/>
+                <field name="paid_salary"/>
+                <field name="store"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Attendance Action -->
+    <record id="action_rd_attendance" model="ir.actions.act_window">
+        <field name="name">Attendance</field>
+        <field name="res_model">rd.attendance</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_rd_employee"
+              name="Employees"
+              parent="menu_rd_staff"
+              action="action_rd_employee"
+              sequence="10"/>
+
+    <menuitem id="menu_rd_attendance"
+              name="Attendance"
+              parent="menu_rd_staff"
+              action="action_rd_attendance"
+              sequence="20"/>
+</odoo>

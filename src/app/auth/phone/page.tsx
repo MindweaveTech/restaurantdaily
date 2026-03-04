@@ -94,7 +94,7 @@ export default function PhoneAuthPage() {
 
             <div className="flex items-center gap-2">
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt="Restaurant Daily"
                 width={32}
                 height={32}

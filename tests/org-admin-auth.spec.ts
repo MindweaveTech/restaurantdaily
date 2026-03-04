@@ -5,8 +5,8 @@ test.describe('Org Admin Authentication Flow', () => {
   test('should navigate to phone auth page', async ({ page }) => {
     await page.goto(testConfig.urls.home);
 
-    // Click sign in with phone
-    await page.click('a:has-text("Sign in with Phone")');
+    // Click sign in with phone link
+    await page.click('a[href="/auth/phone"]:has-text("Sign in")');
 
     // Should be on auth/phone page
     await expect(page).toHaveURL(/\/auth\/phone/);
@@ -16,12 +16,12 @@ test.describe('Org Admin Authentication Flow', () => {
   test('should enter org admin phone number', async ({ page }) => {
     await page.goto(testConfig.urls.authPhone);
 
-    // Enter phone number
+    // Enter phone number (without country code - component adds it)
     const phoneInput = page.locator('input[type="tel"]');
-    await phoneInput.fill(phoneDigitsOnly(testConfig.orgAdmin.phone));
+    await phoneInput.fill(testConfig.orgAdmin.phoneLocal);
 
-    // Verify input value
-    await expect(phoneInput).toHaveValue(phoneDigitsOnly(testConfig.orgAdmin.phone));
+    // Verify input value includes country code (component formats it)
+    await expect(phoneInput).toHaveValue(testConfig.orgAdmin.phone);
   });
 
   // This test requires manual OTP entry or OTP bypass for automation

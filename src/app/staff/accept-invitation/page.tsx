@@ -2,7 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ChefHat, CheckCircle, XCircle, Clock, Phone, Building2 } from 'lucide-react';
+import Image from 'next/image';
+import { CheckCircle, XCircle, Clock, Phone, Building2, UserCheck, ArrowRight, AlertTriangle, Sparkles } from 'lucide-react';
+import { PageLayout, LoadingScreen } from '@/components/ui/page-layout';
+import { GlassCard, GlassInput, GlassButton, GlassNotice, GlassIconBadge } from '@/components/ui/glass-card';
 
 interface InvitationDetails {
   restaurant_name: string;
@@ -38,8 +41,6 @@ function AcceptInvitationContent() {
   const validateInvitation = async (invitationToken: string) => {
     setIsLoading(true);
     try {
-      // For now, we'll validate the invitation by attempting to get details
-      // In a real implementation, you might want a separate validation endpoint
       const response = await fetch('/api/staff/validate-invitation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +87,6 @@ function AcceptInvitationContent() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store the auth token
         localStorage.setItem('auth_token', data.token);
 
         setMessage({
@@ -94,7 +94,6 @@ function AcceptInvitationContent() {
           text: 'Welcome to the team! Redirecting to your dashboard...'
         });
 
-        // Redirect to staff dashboard after a short delay
         setTimeout(() => {
           router.push('/dashboard/staff');
         }, 2000);
@@ -116,74 +115,98 @@ function AcceptInvitationContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-700">Validating invitation...</h2>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Validating invitation..."
+        subMessage="Please wait while we verify your invitation"
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <PageLayout>
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-xl flex-1 flex flex-col justify-center">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="mx-auto w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mb-4">
-            <ChefHat className="h-8 w-8 text-white" />
+          <div className="flex items-center justify-center mb-6">
+            <Image
+              src="/logo.svg"
+              alt="Restaurant Daily"
+              width={40}
+              height={40}
+              className="w-10 h-10 mr-3"
+            />
+            <span className="text-2xl font-bold text-white">Restaurant Daily</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Restaurant Daily</h1>
-          <p className="text-gray-600">Staff Invitation</p>
+
+          <div className="flex justify-center mb-4">
+            <GlassIconBadge icon={<UserCheck className="h-8 w-8" />} variant="info" size="lg" glow />
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            Staff Invitation
+          </h1>
+
+          <p className="text-white/60">
+            You&apos;ve been invited to join a restaurant team
+          </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <GlassCard size="lg" variant="info" className="flex-1 flex flex-col">
+          {/* Success/Error Message */}
           {message && (
-            <div className={`mb-6 p-4 rounded-lg flex items-center ${
-              message.type === 'success'
-                ? 'bg-green-100 text-green-700'
-                : 'bg-red-100 text-red-700'
-            }`}>
-              {message.type === 'success' ? (
-                <CheckCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-              ) : (
-                <XCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-              )}
+            <GlassNotice
+              variant={message.type === 'success' ? 'success' : 'error'}
+              icon={message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              className="mb-6"
+            >
               {message.text}
-            </div>
+            </GlassNotice>
           )}
 
+          {/* Invitation Details */}
           {invitation && !message?.type && (
             <>
-              {/* Invitation Details */}
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  You&apos;re Invited! 🎉
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-semibold text-white mb-2 flex items-center justify-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-400" />
+                  You&apos;re Invited!
                 </h2>
+                <p className="text-white/60 text-sm">
+                  Join the team and start tracking restaurant performance
+                </p>
+              </div>
 
-                <div className="space-y-3 mb-6">
+              {/* Restaurant Info Card */}
+              <GlassCard size="md" variant="default" className="mb-6">
+                <div className="space-y-4">
                   <div className="flex items-center">
-                    <Building2 className="h-5 w-5 text-gray-400 mr-3" />
+                    <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20 mr-4">
+                      <Building2 className="h-5 w-5 text-blue-400" />
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-600">Restaurant</p>
-                      <p className="font-medium text-gray-900">{invitation.restaurant_name}</p>
+                      <p className="text-sm text-white/50">Restaurant</p>
+                      <p className="font-medium text-white">{invitation.restaurant_name}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-400 mr-3" />
+                    <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 mr-4">
+                      <UserCheck className="h-5 w-5 text-emerald-400" />
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-600">Role</p>
-                      <p className="font-medium text-gray-900 capitalize">{invitation.role}</p>
+                      <p className="text-sm text-white/50">Role</p>
+                      <p className="font-medium text-white capitalize">{invitation.role}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-gray-400 mr-3" />
+                    <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20 mr-4">
+                      <Clock className="h-5 w-5 text-amber-400" />
+                    </div>
                     <div>
-                      <p className="text-sm text-gray-600">Expires</p>
-                      <p className="font-medium text-gray-900">
+                      <p className="text-sm text-white/50">Expires</p>
+                      <p className="font-medium text-white">
                         {new Date(invitation.expires_at).toLocaleDateString('en-US', {
                           month: 'long',
                           day: 'numeric',
@@ -193,97 +216,109 @@ function AcceptInvitationContent() {
                     </div>
                   </div>
                 </div>
+              </GlassCard>
 
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-orange-800">
-                    <strong>Join the team!</strong> Enter your phone number below to accept this invitation
-                    and start tracking restaurant performance with Restaurant Daily.
-                  </p>
-                </div>
-              </div>
+              {/* Info Notice */}
+              <GlassNotice variant="info" icon={<Phone className="h-4 w-4" />} title="Verify your phone number" className="mb-6">
+                Enter the phone number where you received this invitation to confirm your identity and join the team.
+              </GlassNotice>
 
               {/* Phone Number Form */}
-              <form onSubmit={handleAcceptInvitation}>
-                <div className="mb-6">
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    <Phone className="h-4 w-4 inline mr-2" />
-                    Your Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Enter the phone number this invitation was sent to"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    This should match the phone number where you received the invitation
-                  </p>
-                </div>
+              <form onSubmit={handleAcceptInvitation} className="space-y-6 flex-1 flex flex-col">
+                <GlassInput
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="Enter your phone number"
+                  label="Your Phone Number"
+                  helperText="This should match the phone number where you received the invitation"
+                  required
+                />
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !phoneNumber.trim()}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Accepting Invitation...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Accept Invitation
-                    </>
-                  )}
-                </button>
+                <div className="mt-auto pt-4">
+                  <GlassButton
+                    type="submit"
+                    disabled={isSubmitting || !phoneNumber.trim()}
+                    loading={isSubmitting}
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-blue-500/25 hover:shadow-blue-500/40"
+                    rightIcon={!isSubmitting ? <ArrowRight className="h-5 w-5" /> : undefined}
+                  >
+                    {isSubmitting ? 'Accepting Invitation...' : 'Accept Invitation'}
+                  </GlassButton>
+                </div>
               </form>
             </>
           )}
 
+          {/* Error State - Invalid Invitation */}
           {message?.type === 'error' && !invitation && (
-            <div className="text-center py-8">
-              <XCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <div className="text-center py-8 flex-1 flex flex-col items-center justify-center">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full" />
+                <div className="relative p-4 bg-gradient-to-br from-red-500/20 to-rose-500/10 rounded-2xl border border-red-500/20">
+                  <XCircle className="h-10 w-10 text-red-400" />
+                </div>
+              </div>
+
+              <h3 className="text-xl font-semibold text-white mb-2">
                 Invalid Invitation
               </h3>
-              <p className="text-gray-600 mb-6">
-                This invitation link is not valid or has expired. Please contact your restaurant
-                administrator for a new invitation.
+              <p className="text-white/50 mb-8 max-w-sm">
+                This invitation link is not valid or has expired. Please contact your restaurant administrator for a new invitation.
               </p>
-              <button
+
+              <GlassButton
                 onClick={() => router.push('/')}
-                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                variant="secondary"
+                size="md"
+                rightIcon={<ArrowRight className="h-4 w-4" />}
               >
                 Go to Homepage
-              </button>
+              </GlassButton>
             </div>
           )}
-        </div>
+
+          {/* Success State */}
+          {message?.type === 'success' && (
+            <div className="text-center py-8 flex-1 flex flex-col items-center justify-center">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full" />
+                <div className="relative p-4 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-2xl border border-emerald-500/20">
+                  <CheckCircle className="h-10 w-10 text-emerald-400" />
+                </div>
+              </div>
+
+              <h3 className="text-xl font-semibold text-white mb-2">
+                Welcome to the Team!
+              </h3>
+              <p className="text-white/50 mb-4">
+                Redirecting you to your dashboard...
+              </p>
+
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-white/20 border-t-emerald-500" />
+            </div>
+          )}
+        </GlassCard>
 
         {/* Footer */}
         <div className="text-center mt-6">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-white/40">
             Restaurant Daily - Performance Tracking Made Simple
           </p>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }
 
 export default function AcceptInvitationPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-700">Loading...</h2>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Loading..."
+        subMessage="Please wait"
+      />
     }>
       <AcceptInvitationContent />
     </Suspense>

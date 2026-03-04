@@ -50,7 +50,7 @@ export class OTPService {
       length: parseInt(process.env.OTP_LENGTH || '6'),
       expiry_minutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '5'),
       max_attempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3'),
-      rate_limit_per_hour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || '3'),
+      rate_limit_per_hour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || '20'),
       cleanup_interval_hours: parseInt(process.env.OTP_CLEANUP_INTERVAL_HOURS || '24')
     };
 

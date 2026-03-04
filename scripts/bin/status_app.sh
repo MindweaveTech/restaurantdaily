@@ -6,6 +6,12 @@
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_FILE="$PROJECT_ROOT/.app.pid"
 
+# Read PORT from .env.local (default: 3002)
+if [ -f "$PROJECT_ROOT/.env.local" ]; then
+    PORT=$(grep "^PORT=" "$PROJECT_ROOT/.env.local" | cut -d'=' -f2 | tr -d ' ')
+fi
+PORT=${PORT:-3002}
+
 echo "📊 Restaurant Daily Server Status"
 echo "=================================="
 echo ""
@@ -20,8 +26,8 @@ PID=$(cat "$PID_FILE")
 if kill -0 "$PID" 2>/dev/null; then
     echo "Status:     ✅ RUNNING"
     echo "Process ID: $PID"
-    echo "Port:       3001"
-    echo "URL:        http://localhost:3001"
+    echo "Port:       $PORT"
+    echo "URL:        http://localhost:$PORT"
     echo ""
     echo "Memory Usage:"
     ps aux | grep "$PID" | grep -v grep | awk '{print "  " $6 "KB"}'

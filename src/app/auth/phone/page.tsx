@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Shield, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Shield, Sparkles, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import PhoneInput from '@/components/ui/phone-input';
@@ -14,6 +14,22 @@ export default function PhoneAuthPage() {
   const [isValid, setIsValid] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Check if we're on localhost for demo login (check immediately on client)
+  const [isLocalhost, setIsLocalhost] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      return hostname === 'localhost' || hostname === '127.0.0.1';
+    }
+    return false;
+  });
+
+  // Also check in useEffect for hydration safety
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    console.log('🔍 Demo login check:', { hostname, isLocal });
+    setIsLocalhost(isLocal);
+  }, []);
 
   const handlePhoneChange = (phone: string, valid: boolean) => {
     setPhoneNumber(phone);
@@ -64,6 +80,40 @@ export default function PhoneAuthPage() {
       handleRequestOTP();
     }
   };
+
+  // Demo login - bypasses OTP for testing (localhost only)
+  const handleDemoLogin = async () => {
+    if (!isLocalhost) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/demo-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        localStorage.setItem('auth_token', data.token);
+        router.push('/auth/role-selection');
+      } else {
+        setError(data.error || 'Demo login failed');
+      }
+    } catch (err) {
+      setError('Demo login failed. Please try again.');
+      console.error('Demo login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Demo login controlled by env variable (only works on localhost anyway)
+  const isDemoEnabled = process.env.NEXT_PUBLIC_DEMO_LOGIN_ENABLED?.toLowerCase() === 'true';
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -128,6 +178,25 @@ export default function PhoneAuthPage() {
                   Enter your phone number to access your restaurant dashboard
                 </p>
               </div>
+
+              {/* Error Banner - For API errors like rate limiting */}
+              {error && (
+                <div className="relative mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 bg-red-500/20 rounded-lg shrink-0">
+                      <AlertCircle className="h-5 w-5 text-red-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-red-300 mb-1">
+                        Unable to Send Code
+                      </h3>
+                      <p className="text-sm text-red-400/90">
+                        {error}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Phone Input Form */}
               <div className="relative space-y-6" onKeyPress={handleKeyPress}>
@@ -196,6 +265,38 @@ export default function PhoneAuthPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Demo Login - Development mode only */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="relative mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 bg-blue-500/20 rounded-lg">
+                      <Sparkles className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-300">
+                        Demo Mode
+                      </h3>
+                      <p className="text-xs text-white/40">
+                        Skip OTP verification for testing
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleDemoLogin}
+                    disabled={loading}
+                    className={cn(
+                      'w-full py-2.5 rounded-lg font-medium text-sm',
+                      'bg-blue-500/20 border border-blue-500/30 text-blue-300',
+                      'hover:bg-blue-500/30 hover:border-blue-500/40',
+                      'transition-all duration-200',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
+                  >
+                    {loading ? 'Logging in...' : '🧪 Demo Login (Bypass OTP)'}
+                  </button>
+                </div>
+              )}
 
               {/* Help Text */}
               <div className="relative mt-6 text-center">

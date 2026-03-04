@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { role, invitationToken } = body;
 
+    console.log('🔍 Update role request:', { role, invitationToken, bodyKeys: Object.keys(body) });
+
     // Get authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

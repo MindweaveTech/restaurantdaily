@@ -31,6 +31,7 @@ export const testConfig = {
     home: '/',
     authPhone: '/auth/phone',
     authVerify: '/auth/verify',
+    authRoleSelection: '/auth/role-selection',
     dashboard: '/dashboard',
     adminDashboard: '/dashboard/admin',
     staffDashboard: '/dashboard/staff',

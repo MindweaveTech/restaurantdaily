@@ -10,7 +10,8 @@ import {
   FileText,
   Settings,
   UserPlus,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { DashboardShell, StatCard, AttendanceOverview } from '@/components/dashboard';
 import StaffInvitationModal from '@/components/admin/StaffInvitationModal';
@@ -37,9 +38,10 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading Dashboard...</p>
+        <div className="glass-card p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/20 border-t-primary mx-auto mb-4"></div>
+          <p className="text-foreground font-medium">Loading Dashboard...</p>
+          <p className="text-muted-foreground text-sm mt-1">Preparing your workspace</p>
         </div>
       </div>
     );
@@ -49,33 +51,44 @@ export default function AdminDashboard() {
     <DashboardShell>
       {/* Welcome Banner */}
       {showWelcomeCard && (
-        <div className="relative mb-6 p-6 rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 border border-primary/20">
+        <div className="glass-card relative mb-6 p-6 border-primary/20">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-amber-500/5 to-transparent pointer-events-none rounded-[inherit]" />
+
           <button
             onClick={dismissWelcomeCard}
-            className="absolute top-4 right-4 p-1 rounded-full text-foreground/50 hover:text-foreground hover:bg-white/10 transition-colors"
+            className="absolute top-4 right-4 p-1.5 rounded-full text-foreground/50 hover:text-foreground hover:bg-white/10 transition-colors z-10"
             aria-label="Dismiss welcome message"
           >
             <X className="h-5 w-5" />
           </button>
-          <h2 className="text-xl font-bold text-foreground mb-2 pr-8">
-            Welcome to Restaurant Daily
-          </h2>
-          <p className="text-muted-foreground pr-8 max-w-2xl">
-            Your restaurant management hub. Track attendance, manage staff schedules,
-            and streamline payroll processing all in one place.
-          </p>
-          <div className="flex gap-3 mt-4">
-            <Button
-              onClick={() => setIsInvitationModalOpen(true)}
-              className="gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
-              Invite Staff
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Configure Settings
-            </Button>
+
+          <div className="relative flex items-start gap-4">
+            <div className="hidden sm:block p-3 bg-gradient-to-br from-primary/20 to-amber-500/10 rounded-2xl border border-primary/20">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1 pr-8">
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Welcome to Restaurant Daily
+              </h2>
+              <p className="text-muted-foreground max-w-2xl">
+                Your restaurant management hub. Track attendance, manage staff schedules,
+                and streamline payroll processing all in one place.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-4">
+                <Button
+                  onClick={() => setIsInvitationModalOpen(true)}
+                  className="gap-2 bg-gradient-to-r from-primary to-amber-600 hover:from-primary/90 hover:to-amber-600/90 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invite Staff
+                </Button>
+                <Button variant="outline" className="gap-2 bg-white/5 border-white/10 hover:bg-white/10">
+                  <Settings className="h-4 w-4" />
+                  Configure Settings
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

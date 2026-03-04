@@ -36,7 +36,7 @@ export default function RoleSelectionPage() {
 
         // Token is valid
         setValidatingSession(false);
-      } catch (error) {
+      } catch {
         console.error('Invalid token format, redirecting to login');
         localStorage.removeItem('auth_token');
         router.push('/auth/phone');

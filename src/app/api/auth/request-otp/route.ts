@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { TwilioMessagingClient } from '@/lib/messaging/twilio-client';
 import { PhoneValidator } from '@/lib/messaging/phone-validator';
-import { OTPRateLimit, OTPService } from '@/lib/messaging/otp-service';
-import { logAPI, logAuth, logError } from '@/lib/logger';
+import { OTPRateLimit } from '@/lib/messaging/otp-service';
+import { logAPI, logAuth } from '@/lib/logger';
 
 // Request validation schema
 const requestOTPSchema = z.object({

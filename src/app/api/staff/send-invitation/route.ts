@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { staffInvitationService, restaurantService } from '@/lib/database';
 import { secretsManager } from '@/lib/secrets';
-import TwilioMessagingClient, { type MessageResult } from '@/lib/messaging/twilio-client';
-import { PhoneValidator } from '@/lib/messaging/phone-validator';
+import TwilioMessagingClient from '@/lib/messaging/twilio-client';
 
 interface JWTPayload {
   phone: string;

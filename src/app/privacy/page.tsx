@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Shield, Eye, Lock, UserCheck, Clock, Share2, AlertTriangle, FileText } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, Lock, UserCheck, Share2, AlertTriangle, FileText } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   const dataRights = [

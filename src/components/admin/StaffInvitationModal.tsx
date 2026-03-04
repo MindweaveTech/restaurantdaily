@@ -138,7 +138,7 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
           text: 'Invitation cancelled successfully'
         });
       }
-    } catch (error) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Failed to cancel invitation'

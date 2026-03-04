@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChefHat, Clock, FileText, TrendingUp, User, Building2, CheckCircle } from 'lucide-react';
+import { CheckInCard } from '@/components/attendance';
 
 interface StaffInfo {
   phone: string;
@@ -80,6 +81,11 @@ export default function StaffDashboard() {
           <p className="opacity-90">
             You&apos;re now part of {userInfo?.restaurant_name}. Track your daily tasks and contribute to restaurant performance.
           </p>
+        </div>
+
+        {/* Check-in Card - Primary Action */}
+        <div className="mb-8">
+          <CheckInCard />
         </div>
 
         {/* Quick Stats */}

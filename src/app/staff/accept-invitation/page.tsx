@@ -56,7 +56,7 @@ function AcceptInvitationContent() {
           text: data.error || 'This invitation is no longer valid or has expired.'
         });
       }
-    } catch (error) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Failed to validate invitation. Please try again.'
@@ -104,7 +104,7 @@ function AcceptInvitationContent() {
           text: data.error || 'Failed to accept invitation. Please try again.'
         });
       }
-    } catch (error) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Something went wrong. Please try again.'

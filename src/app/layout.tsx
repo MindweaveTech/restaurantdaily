@@ -19,8 +19,13 @@ export const metadata: Metadata = {
   keywords: ["restaurant management software", "daily operations", "cash tracking", "payment management", "restaurant POS", "team management", "SMS OTP"],
   authors: [{ name: "Mindweave Technologies" }],
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+    shortcut: '/favicon.svg',
   },
   openGraph: {
     title: "Restaurant Daily - Simplify Your Restaurant Operations",
@@ -29,13 +34,13 @@ export const metadata: Metadata = {
     siteName: "Restaurant Daily",
     locale: "en_IN",
     type: "website",
-    images: ['/logo.png'],
+    images: ['/og-image.png'],
   },
   twitter: {
     card: "summary_large_image",
     title: "Restaurant Daily - Simplify Restaurant Operations",
     description: "Track cash, payments & team in real-time. Mobile-first management for restaurants.",
-    images: ['/logo.png'],
+    images: ['/og-image.png'],
   },
 };
 

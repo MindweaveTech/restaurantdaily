@@ -105,3 +105,94 @@ export interface DashboardStats {
   pendingVouchers: number;
   upcomingPayments: ElectricityPayment[];
 }
+
+// ============================================
+// Attendance System Types
+// ============================================
+
+export type AttendanceStatus =
+  | 'checked_in'
+  | 'checked_out'
+  | 'on_break'
+  | 'absent'
+  | 'late'
+  | 'early_leave';
+
+export interface AttendanceLog {
+  id: string;
+  userId: string;
+  restaurantId: string;
+  checkInTime: Date;
+  checkOutTime?: Date;
+  checkInLat?: number;
+  checkInLng?: number;
+  checkOutLat?: number;
+  checkOutLng?: number;
+  hoursWorked?: number;
+  overtimeHours: number;
+  breakMinutes: number;
+  status: AttendanceStatus;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Database row format (snake_case)
+export interface AttendanceLogRow {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  check_in_time: string;
+  check_out_time?: string;
+  check_in_lat?: number;
+  check_in_lng?: number;
+  check_out_lat?: number;
+  check_out_lng?: number;
+  hours_worked?: number;
+  overtime_hours: number;
+  break_minutes: number;
+  status: AttendanceStatus;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Attendance with user details (for admin views)
+export interface AttendanceWithUser extends AttendanceLog {
+  userName?: string;
+  userPhone?: string;
+}
+
+// Today's attendance summary for dashboard
+export interface TodayAttendanceSummary {
+  totalStaff: number;
+  checkedIn: number;
+  checkedOut: number;
+  notCheckedIn: number;
+  onBreak: number;
+}
+
+// Check-in request
+export interface CheckInRequest {
+  latitude?: number;
+  longitude?: number;
+  notes?: string;
+}
+
+// Check-out request
+export interface CheckOutRequest {
+  latitude?: number;
+  longitude?: number;
+  notes?: string;
+  breakMinutes?: number;
+}
+
+// Attendance history filters
+export interface AttendanceHistoryFilters {
+  startDate?: string;
+  endDate?: string;
+  userId?: string;
+  status?: AttendanceStatus;
+  limit?: number;
+  offset?: number;
+}

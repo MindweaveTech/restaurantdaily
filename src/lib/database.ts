@@ -515,9 +515,399 @@ export class StaffInvitationService {
   }
 }
 
+// Attendance operations
+export class AttendanceService {
+
+  // Check if user has an active check-in (not checked out)
+  async getActiveCheckIn(userId: string, restaurantId: string): Promise<{
+    id: string;
+    user_id: string;
+    restaurant_id: string;
+    check_in_time: string;
+    check_out_time: string | null;
+    status: string;
+    notes: string | null;
+    break_minutes: number;
+  } | null> {
+    const client = await getClient();
+    const { data, error } = await client
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('restaurant_id', restaurantId)
+      .is('check_out_time', null)
+      .order('check_in_time', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // No active check-in
+      console.error('Database error fetching active check-in:', error);
+      throw new Error(`Failed to fetch active check-in: ${error.message}`);
+    }
+    return data;
+  }
+
+  // Check in a user
+  async checkIn(data: {
+    userId: string;
+    restaurantId: string;
+    latitude?: number;
+    longitude?: number;
+    notes?: string;
+  }): Promise<{
+    id: string;
+    user_id: string;
+    restaurant_id: string;
+    check_in_time: string;
+    status: string;
+  }> {
+    // First check if user already has an active check-in
+    const activeCheckIn = await this.getActiveCheckIn(data.userId, data.restaurantId);
+    if (activeCheckIn) {
+      throw new Error('User already has an active check-in. Please check out first.');
+    }
+
+    const checkInData = {
+      user_id: data.userId,
+      restaurant_id: data.restaurantId,
+      check_in_lat: data.latitude || null,
+      check_in_lng: data.longitude || null,
+      notes: data.notes || null,
+      status: 'checked_in',
+    };
+
+    const client = await getClient();
+    const { data: attendance, error } = await client
+      .from('attendance_logs')
+      .insert([checkInData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error creating check-in:', error);
+      throw new Error(`Failed to check in: ${error.message}`);
+    }
+
+    return attendance;
+  }
+
+  // Check out a user
+  async checkOut(data: {
+    attendanceId: string;
+    userId: string;
+    latitude?: number;
+    longitude?: number;
+    notes?: string;
+    breakMinutes?: number;
+  }): Promise<{
+    id: string;
+    user_id: string;
+    check_in_time: string;
+    check_out_time: string;
+    hours_worked: number;
+    status: string;
+  }> {
+    const client = await getClient();
+
+    const updateData: Record<string, unknown> = {
+      check_out_time: new Date().toISOString(),
+      check_out_lat: data.latitude || null,
+      check_out_lng: data.longitude || null,
+    };
+
+    if (data.notes) {
+      updateData.notes = data.notes;
+    }
+
+    if (data.breakMinutes !== undefined) {
+      updateData.break_minutes = data.breakMinutes;
+    }
+
+    const { data: attendance, error } = await client
+      .from('attendance_logs')
+      .update(updateData)
+      .eq('id', data.attendanceId)
+      .eq('user_id', data.userId) // Security: ensure user owns this record
+      .is('check_out_time', null) // Prevent double checkout
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('No active check-in found or already checked out');
+      }
+      console.error('Database error checking out:', error);
+      throw new Error(`Failed to check out: ${error.message}`);
+    }
+
+    return attendance;
+  }
+
+  // Get today's attendance for a restaurant (admin view)
+  async getTodayAttendance(restaurantId: string): Promise<Array<{
+    id: string;
+    user_id: string;
+    check_in_time: string;
+    check_out_time: string | null;
+    hours_worked: number | null;
+    status: string;
+    user_name: string | null;
+    user_phone: string;
+  }>> {
+    const client = await getClient();
+
+    // Get start of today in UTC
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const { data, error } = await client
+      .from('attendance_logs')
+      .select(`
+        id,
+        user_id,
+        check_in_time,
+        check_out_time,
+        hours_worked,
+        status,
+        users!inner (
+          name,
+          phone
+        )
+      `)
+      .eq('restaurant_id', restaurantId)
+      .gte('check_in_time', today.toISOString())
+      .order('check_in_time', { ascending: false });
+
+    if (error) {
+      console.error('Database error fetching today attendance:', error);
+      throw new Error(`Failed to fetch today's attendance: ${error.message}`);
+    }
+
+    // Transform the data to flatten user info
+    // Note: Supabase returns joined data as arrays, so we handle both cases
+    return (data || []).map((record: {
+      id: string;
+      user_id: string;
+      check_in_time: string;
+      check_out_time: string | null;
+      hours_worked: number | null;
+      status: string;
+      users: { name: string | null; phone: string } | { name: string | null; phone: string }[];
+    }) => {
+      // Handle both single object and array formats from Supabase
+      const user = Array.isArray(record.users) ? record.users[0] : record.users;
+      return {
+        id: record.id,
+        user_id: record.user_id,
+        check_in_time: record.check_in_time,
+        check_out_time: record.check_out_time,
+        hours_worked: record.hours_worked,
+        status: record.status,
+        user_name: user?.name || null,
+        user_phone: user?.phone || '',
+      };
+    });
+  }
+
+  // Get attendance history with filters
+  async getAttendanceHistory(options: {
+    restaurantId: string;
+    userId?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    data: Array<{
+      id: string;
+      user_id: string;
+      check_in_time: string;
+      check_out_time: string | null;
+      hours_worked: number | null;
+      overtime_hours: number;
+      status: string;
+      notes: string | null;
+      user_name: string | null;
+      user_phone: string;
+    }>;
+    total: number;
+  }> {
+    const client = await getClient();
+
+    let query = client
+      .from('attendance_logs')
+      .select(`
+        id,
+        user_id,
+        check_in_time,
+        check_out_time,
+        hours_worked,
+        overtime_hours,
+        status,
+        notes,
+        users!inner (
+          name,
+          phone
+        )
+      `, { count: 'exact' })
+      .eq('restaurant_id', options.restaurantId)
+      .order('check_in_time', { ascending: false });
+
+    if (options.userId) {
+      query = query.eq('user_id', options.userId);
+    }
+
+    if (options.startDate) {
+      query = query.gte('check_in_time', options.startDate);
+    }
+
+    if (options.endDate) {
+      query = query.lte('check_in_time', options.endDate);
+    }
+
+    if (options.status) {
+      query = query.eq('status', options.status);
+    }
+
+    if (options.limit) {
+      query = query.limit(options.limit);
+    }
+
+    if (options.offset) {
+      query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Database error fetching attendance history:', error);
+      throw new Error(`Failed to fetch attendance history: ${error.message}`);
+    }
+
+    // Transform the data - handle both array and object formats from Supabase
+    const transformedData = (data || []).map((record: {
+      id: string;
+      user_id: string;
+      check_in_time: string;
+      check_out_time: string | null;
+      hours_worked: number | null;
+      overtime_hours: number;
+      status: string;
+      notes: string | null;
+      users: { name: string | null; phone: string } | { name: string | null; phone: string }[];
+    }) => {
+      const user = Array.isArray(record.users) ? record.users[0] : record.users;
+      return {
+        id: record.id,
+        user_id: record.user_id,
+        check_in_time: record.check_in_time,
+        check_out_time: record.check_out_time,
+        hours_worked: record.hours_worked,
+        overtime_hours: record.overtime_hours,
+        status: record.status,
+        notes: record.notes,
+        user_name: user?.name || null,
+        user_phone: user?.phone || '',
+      };
+    });
+
+    return {
+      data: transformedData,
+      total: count || 0,
+    };
+  }
+
+  // Get user's attendance history
+  async getUserAttendanceHistory(userId: string, options?: {
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<Array<{
+    id: string;
+    check_in_time: string;
+    check_out_time: string | null;
+    hours_worked: number | null;
+    status: string;
+    notes: string | null;
+  }>> {
+    const client = await getClient();
+
+    let query = client
+      .from('attendance_logs')
+      .select('id, check_in_time, check_out_time, hours_worked, status, notes')
+      .eq('user_id', userId)
+      .order('check_in_time', { ascending: false });
+
+    if (options?.startDate) {
+      query = query.gte('check_in_time', options.startDate);
+    }
+
+    if (options?.endDate) {
+      query = query.lte('check_in_time', options.endDate);
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Database error fetching user attendance history:', error);
+      throw new Error(`Failed to fetch attendance history: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  // Get attendance summary for a restaurant
+  async getAttendanceSummary(restaurantId: string): Promise<{
+    totalStaff: number;
+    checkedIn: number;
+    checkedOut: number;
+    notCheckedIn: number;
+  }> {
+    const client = await getClient();
+
+    // Get start of today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get total active staff
+    const { count: totalStaff } = await client
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'active')
+      .eq('role', 'employee');
+
+    // Get today's check-ins
+    const { data: todayAttendance } = await client
+      .from('attendance_logs')
+      .select('user_id, status')
+      .eq('restaurant_id', restaurantId)
+      .gte('check_in_time', today.toISOString());
+
+    const checkedIn = todayAttendance?.filter(a => a.status === 'checked_in').length || 0;
+    const checkedOut = todayAttendance?.filter(a => a.status === 'checked_out').length || 0;
+    const total = totalStaff || 0;
+    const notCheckedIn = Math.max(0, total - (checkedIn + checkedOut));
+
+    return {
+      totalStaff: total,
+      checkedIn,
+      checkedOut,
+      notCheckedIn,
+    };
+  }
+}
+
 // Singleton instances
 export const systemAdminService = new SystemAdminService();
 export const businessInvitationService = new BusinessInvitationService();
 export const restaurantService = new RestaurantService();
 export const userService = new UserService();
 export const staffInvitationService = new StaffInvitationService();
+export const attendanceService = new AttendanceService();

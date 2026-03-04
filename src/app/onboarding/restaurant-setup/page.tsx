@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChefHat, Building2, ExternalLink, ArrowRight, ArrowLeft, CheckCircle, AlertTriangle, MapPin, Phone, Mail, Info, FileCheck, Shield } from 'lucide-react';
+import { ChefHat, Building2, ExternalLink, ArrowRight, ArrowLeft, CheckCircle, AlertTriangle, MapPin, Phone, Mail, Info, FileCheck, Shield, Upload, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageLayout, LoadingScreen, ErrorScreen } from '@/components/ui/page-layout';
 import { GlassCard, GlassInput, GlassTextarea, GlassSelect, GlassButton, GlassNotice, GlassIconBadge } from '@/components/ui/glass-card';
@@ -31,6 +31,20 @@ export default function RestaurantSetupPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // GST Verification state
+  const [gstVerifying, setGstVerifying] = useState(false);
+  const [gstVerified, setGstVerified] = useState<boolean | null>(null);
+  const [gstData, setGstData] = useState<{
+    legalName?: string;
+    tradeName?: string;
+    address?: string;
+    status?: string;
+  } | null>(null);
+
+  // File upload state
+  const [gstDocument, setGstDocument] = useState<File | null>(null);
+  const [fssaiDocument, setFssaiDocument] = useState<File | null>(null);
+
   // Role validation - ensure only admin users can access restaurant setup
   useEffect(() => {
     const validateUserRole = () => {
@@ -45,7 +59,24 @@ export default function RestaurantSetupPage() {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
 
+        // Check if token is expired
+        const currentTime = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < currentTime) {
+          console.log('Token expired, clearing and redirecting');
+          localStorage.removeItem('auth_token');
+          setRoleError('Your session has expired. Please log in again.');
+          setTimeout(() => router.push('/auth/phone'), 2000);
+          return;
+        }
+
         if (payload.role !== 'business_admin' && payload.role !== 'admin') {
+          // If role is 'user' or undefined, redirect to role selection (not an error)
+          if (!payload.role || payload.role === 'user') {
+            console.log('User needs to select role first');
+            router.push('/auth/role-selection');
+            return;
+          }
+
           setRoleError(
             payload.role === 'employee' || payload.role === 'staff'
               ? 'Staff members cannot create restaurants. Only restaurant admins can set up new restaurants.'
@@ -66,6 +97,7 @@ export default function RestaurantSetupPage() {
         setIsValidating(false);
       } catch (error) {
         console.error('Token validation error:', error);
+        localStorage.removeItem('auth_token');
         setRoleError('Invalid authentication token. Please log in again.');
         setTimeout(() => router.push('/auth/phone'), 2000);
       }
@@ -128,6 +160,106 @@ export default function RestaurantSetupPage() {
         [field]: '',
       }));
     }
+
+    // Reset GST verification if GST number changes
+    if (field === 'gstNumber') {
+      setGstVerified(null);
+      setGstData(null);
+    }
+  };
+
+  // GST Verification handler
+  const handleVerifyGST = async () => {
+    const gstin = restaurantData.gstNumber.trim().toUpperCase();
+
+    // Validate format first
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+      setErrors(prev => ({ ...prev, gstNumber: 'Invalid GST number format' }));
+      return;
+    }
+
+    setGstVerifying(true);
+    setErrors(prev => ({ ...prev, gstNumber: '' }));
+
+    try {
+      const authToken = localStorage.getItem('auth_token');
+      const response = await fetch('/api/kyc/verify-gst', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ gstin }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.verified && result.data) {
+        setGstVerified(true);
+        setGstData({
+          legalName: result.data.legalName,
+          tradeName: result.data.tradeName,
+          address: result.data.address.full,
+          status: result.data.status,
+        });
+
+        // Auto-fill restaurant name and address if empty
+        if (!restaurantData.name && result.data.tradeName) {
+          setRestaurantData(prev => ({ ...prev, name: result.data.tradeName }));
+        }
+        if (!restaurantData.address && result.data.address.full) {
+          setRestaurantData(prev => ({ ...prev, address: result.data.address.full }));
+        }
+      } else {
+        setGstVerified(false);
+        setGstData(null);
+        setErrors(prev => ({
+          ...prev,
+          gstNumber: result.error || 'GST verification failed'
+        }));
+      }
+    } catch (error) {
+      console.error('GST verification error:', error);
+      setGstVerified(false);
+      setErrors(prev => ({ ...prev, gstNumber: 'Verification service unavailable' }));
+    } finally {
+      setGstVerifying(false);
+    }
+  };
+
+  // File upload handlers
+  const handleFileUpload = (type: 'gst' | 'fssai', file: File | null) => {
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(prev => ({
+          ...prev,
+          [type === 'gst' ? 'gstDocument' : 'fssaiDocument']: 'Please upload a PDF or image file'
+        }));
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({
+          ...prev,
+          [type === 'gst' ? 'gstDocument' : 'fssaiDocument']: 'File size must be less than 5MB'
+        }));
+        return;
+      }
+    }
+
+    if (type === 'gst') {
+      setGstDocument(file);
+    } else {
+      setFssaiDocument(file);
+    }
+
+    // Clear error
+    setErrors(prev => ({
+      ...prev,
+      [type === 'gst' ? 'gstDocument' : 'fssaiDocument']: ''
+    }));
   };
 
   const handleNext = () => {
@@ -281,35 +413,191 @@ export default function RestaurantSetupPage() {
           Business Verification
         </h2>
         <p className="text-white/60">
-          Enter your GST and FSSAI details for KYC verification
+          Verify your GST and FSSAI details for KYC compliance
         </p>
       </div>
 
-      <div className="space-y-5">
-        <GlassInput
-          label="GST Number *"
-          value={restaurantData.gstNumber}
-          onChange={(e) => handleInputChange('gstNumber', e.target.value.toUpperCase())}
-          placeholder="22AAAAA0000A1Z5"
-          error={!!errors.gstNumber}
-          errorMessage={errors.gstNumber}
-          helperText="15-character GST Identification Number"
-        />
+      <div className="space-y-6">
+        {/* GST Number with Verification */}
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <GlassInput
+                label="GST Number *"
+                value={restaurantData.gstNumber}
+                onChange={(e) => handleInputChange('gstNumber', e.target.value.toUpperCase())}
+                placeholder="22AAAAA0000A1Z5"
+                error={!!errors.gstNumber}
+                errorMessage={errors.gstNumber}
+                helperText="15-character GST Identification Number"
+              />
+            </div>
+            <div className="pt-7">
+              <button
+                type="button"
+                onClick={handleVerifyGST}
+                disabled={gstVerifying || restaurantData.gstNumber.length !== 15}
+                className={cn(
+                  'px-4 py-2.5 rounded-lg font-medium text-sm flex items-center gap-2 transition-all',
+                  gstVerifying
+                    ? 'bg-white/5 text-white/50 cursor-wait'
+                    : gstVerified === true
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : gstVerified === false
+                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    : 'bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30'
+                )}
+              >
+                {gstVerifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : gstVerified === true ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : gstVerified === false ? (
+                  <XCircle className="h-4 w-4" />
+                ) : (
+                  <Shield className="h-4 w-4" />
+                )}
+                {gstVerifying ? 'Verifying...' : gstVerified === true ? 'Verified' : gstVerified === false ? 'Failed' : 'Verify'}
+              </button>
+            </div>
+          </div>
 
-        <GlassInput
-          label="FSSAI License Number *"
-          value={restaurantData.fssaiNumber}
-          onChange={(e) => handleInputChange('fssaiNumber', e.target.value.replace(/\D/g, ''))}
-          placeholder="12345678901234"
-          error={!!errors.fssaiNumber}
-          errorMessage={errors.fssaiNumber}
-          helperText="14-digit FSSAI license number (mandatory for food businesses)"
-        />
+          {/* GST Verification Result */}
+          {gstVerified && gstData && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                GST Verified - {gstData.status}
+              </div>
+              <div className="text-white/70 text-sm">
+                <strong>Business:</strong> {gstData.tradeName || gstData.legalName}
+              </div>
+              {gstData.address && (
+                <div className="text-white/50 text-xs">
+                  {gstData.address}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* GST Document Upload */}
+          <div className="flex items-center gap-3">
+            <label className="flex-1 cursor-pointer">
+              <div className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed transition-all',
+                gstDocument
+                  ? 'border-green-500/30 bg-green-500/5'
+                  : 'border-white/20 bg-white/5 hover:border-orange-500/30 hover:bg-orange-500/5'
+              )}>
+                <Upload className={cn('h-5 w-5', gstDocument ? 'text-green-400' : 'text-white/50')} />
+                <div className="flex-1">
+                  <span className={cn('text-sm', gstDocument ? 'text-green-400' : 'text-white/70')}>
+                    {gstDocument ? gstDocument.name : 'Upload GST Certificate (optional)'}
+                  </span>
+                  {!gstDocument && (
+                    <span className="text-xs text-white/40 block">PDF, JPG, PNG - Max 5MB</span>
+                  )}
+                </div>
+                {gstDocument && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); handleFileUpload('gst', null); }}
+                    className="text-white/50 hover:text-red-400"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => handleFileUpload('gst', e.target.files?.[0] || null)}
+              />
+            </label>
+          </div>
+          {errors.gstDocument && (
+            <p className="text-red-400 text-xs">{errors.gstDocument}</p>
+          )}
+        </div>
+
+        {/* FSSAI License Number */}
+        <div className="space-y-3">
+          <GlassInput
+            label="FSSAI License Number *"
+            value={restaurantData.fssaiNumber}
+            onChange={(e) => handleInputChange('fssaiNumber', e.target.value.replace(/\D/g, ''))}
+            placeholder="12345678901234"
+            error={!!errors.fssaiNumber}
+            errorMessage={errors.fssaiNumber}
+            helperText="14-digit FSSAI license number (mandatory for food businesses)"
+          />
+
+          {/* FSSAI Validation Info */}
+          {restaurantData.fssaiNumber.length === 14 && !errors.fssaiNumber && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-2 text-blue-400 text-sm font-medium">
+                <FileCheck className="h-4 w-4" />
+                FSSAI Format Valid
+              </div>
+              <div className="text-white/60 text-xs">
+                {(() => {
+                  const typePrefix = restaurantData.fssaiNumber.substring(0, 2);
+                  const licenseType = typePrefix === '10' || typePrefix === '21' ? 'Central License'
+                    : typePrefix === '11' || typePrefix === '22' ? 'State License'
+                    : typePrefix === '12' || typePrefix === '20' ? 'Basic Registration'
+                    : 'License';
+                  return `${licenseType} • API verification pending (API Setu approval in progress)`;
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* FSSAI Document Upload */}
+          <div className="flex items-center gap-3">
+            <label className="flex-1 cursor-pointer">
+              <div className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed transition-all',
+                fssaiDocument
+                  ? 'border-green-500/30 bg-green-500/5'
+                  : 'border-white/20 bg-white/5 hover:border-orange-500/30 hover:bg-orange-500/5'
+              )}>
+                <Upload className={cn('h-5 w-5', fssaiDocument ? 'text-green-400' : 'text-white/50')} />
+                <div className="flex-1">
+                  <span className={cn('text-sm', fssaiDocument ? 'text-green-400' : 'text-white/70')}>
+                    {fssaiDocument ? fssaiDocument.name : 'Upload FSSAI License (optional)'}
+                  </span>
+                  {!fssaiDocument && (
+                    <span className="text-xs text-white/40 block">PDF, JPG, PNG - Max 5MB</span>
+                  )}
+                </div>
+                {fssaiDocument && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); handleFileUpload('fssai', null); }}
+                    className="text-white/50 hover:text-red-400"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={(e) => handleFileUpload('fssai', e.target.files?.[0] || null)}
+              />
+            </label>
+          </div>
+          {errors.fssaiDocument && (
+            <p className="text-red-400 text-xs">{errors.fssaiDocument}</p>
+          )}
+        </div>
       </div>
 
       <GlassNotice variant="info" icon={<FileCheck className="h-4 w-4" />} title="Why we need this">
         <p className="text-sm text-white/60 mt-1">
-          GST and FSSAI verification helps us ensure compliance with Indian food safety regulations
+          GST and FSSAI verification ensures compliance with Indian food safety regulations
           and enables features like automated tax invoicing.
         </p>
       </GlassNotice>

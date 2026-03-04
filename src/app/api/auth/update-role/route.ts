@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { role, invitationToken } = body;
 
+    console.log('═══════════════════════════════════════════════════════════');
     console.log('🔍 Update role request:', { role, invitationToken, bodyKeys: Object.keys(body) });
+    console.log('═══════════════════════════════════════════════════════════');
 
     // Get authorization header
     const authHeader = request.headers.get('authorization');
@@ -47,12 +49,16 @@ export async function POST(request: NextRequest) {
     let decoded: JWTPayload;
     try {
       decoded = jwt.verify(token, jwtSecret) as JWTPayload;
-    } catch {
+      console.log('🔓 Decoded token:', { phone: decoded.phone, role: decoded.role, restaurant_id: decoded.restaurant_id });
+    } catch (err) {
+      console.error('❌ Token verification failed:', err);
       return NextResponse.json(
         { error: 'Invalid or expired token' },
         { status: 401 }
       );
     }
+
+    console.log('📋 Role requested:', role, '| Current token role:', decoded.role);
 
     let finalRole: UserRole;
     let restaurantId: string | null = null;

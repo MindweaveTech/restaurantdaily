@@ -118,11 +118,19 @@ export default function RoleSelectionPage() {
           router.push('/onboarding/staff-welcome');
         }
       } else {
-        // If the error is authentication-related, redirect to login
+        // If the error is authentication-related (stale/invalid token), clear and redirect
         if (response.status === 401) {
-          console.log('Authentication failed, redirecting to login');
+          console.log('Token invalid or expired - clearing and redirecting to login');
           localStorage.removeItem('auth_token');
-          router.push('/auth/phone');
+          setError('Your session has expired. Please log in again.');
+          setTimeout(() => router.push('/auth/phone'), 2000);
+          return;
+        }
+
+        // Handle 500 errors with helpful message
+        if (response.status === 500) {
+          console.error('Server error during role update');
+          setError('Server error. Please try again or contact support.');
           return;
         }
 

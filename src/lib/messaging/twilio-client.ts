@@ -1,5 +1,4 @@
 import twilio from 'twilio';
-import { execSync } from 'child_process';
 import { PhoneValidator, phoneUtils } from './phone-validator';
 import { OTPService } from './otp-service';
 import { MessageTemplates, type OTPMessageData } from './message-templates';
@@ -29,37 +28,35 @@ export interface SendOTPOptions {
 }
 
 /**
- * Twilio client with HashiCorp Vault integration for secure messaging
+ * Twilio client for SMS/WhatsApp messaging
+ * Uses environment variables for configuration (local: .env.local, production: Vercel/GitHub)
  */
 export class TwilioMessagingClient {
   private static credentials: TwilioCredentials | null = null;
   private static client: twilio.Twilio | null = null;
 
   /**
-   * Get Twilio credentials from Vault
+   * Get Twilio credentials from environment variables
    */
   private static async getCredentials(): Promise<TwilioCredentials> {
     if (this.credentials) return this.credentials;
 
-    try {
-      const vaultToken = process.env.VAULT_TOKEN || 'your_vault_dev_token';
-      const command = `VAULT_ADDR='http://127.0.0.1:8200' VAULT_TOKEN='${vaultToken}' vault kv get -format=json secret/sms`;
-      const result = execSync(command, { encoding: 'utf8' });
-      const parsed = JSON.parse(result);
-
-      this.credentials = {
-        accountSid: parsed.data.data.account_sid,
-        authToken: parsed.data.data.twilio_auth_token,
-        fromNumber: parsed.data.data.from_number,
-        whatsappNumber: parsed.data.data.whatsapp_number,
-        contentSid: parsed.data.data.content_sid,
-        webhookUrl: parsed.data.data.webhook_url
-      };
-
-      return this.credentials;
-    } catch (error) {
-      throw new Error(`Failed to retrieve Twilio credentials from Vault: ${error}`);
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+      throw new Error(
+        'Missing Twilio credentials. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in environment variables.'
+      );
     }
+
+    console.log('📱 Using Twilio credentials from environment variables');
+    this.credentials = {
+      accountSid: process.env.TWILIO_ACCOUNT_SID,
+      authToken: process.env.TWILIO_AUTH_TOKEN,
+      fromNumber: process.env.TWILIO_FROM_NUMBER || '+14155238886',
+      whatsappNumber: process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886',
+      contentSid: process.env.TWILIO_CONTENT_SID || '',
+      webhookUrl: process.env.TWILIO_WEBHOOK_URL || ''
+    };
+    return this.credentials;
   }
 
   /**

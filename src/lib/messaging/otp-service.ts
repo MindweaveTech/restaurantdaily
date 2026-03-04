@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { execSync } from 'child_process';
 
 export interface OTPConfig {
   length: number;
@@ -25,47 +24,27 @@ export interface OTPValidationResult {
 
 /**
  * Secure OTP generation and validation service
- * Uses HashiCorp Vault for configuration
+ * Configuration via environment variables (local: .env.local, production: Vercel/GitHub)
  */
 export class OTPService {
   private static config: OTPConfig | null = null;
   private static otpStore: Map<string, { otp: GeneratedOTP; attempts: number }> = new Map();
 
   /**
-   * Get OTP configuration from Vault
+   * Get OTP configuration from environment variables
    */
   private static async getConfig(): Promise<OTPConfig> {
     if (this.config) return this.config;
 
-    try {
-      const vaultToken = process.env.VAULT_TOKEN || 'your_vault_dev_token';
-      const command = `VAULT_ADDR='http://127.0.0.1:8200' VAULT_TOKEN='${vaultToken}' vault kv get -format=json secret/otp`;
-      const result = execSync(command, { encoding: 'utf8' });
-      const parsed = JSON.parse(result);
+    this.config = {
+      length: parseInt(process.env.OTP_LENGTH || '6'),
+      expiry_minutes: parseInt(process.env.OTP_EXPIRY_MINUTES || '5'),
+      max_attempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3'),
+      rate_limit_per_hour: parseInt(process.env.OTP_RATE_LIMIT_PER_HOUR || '3'),
+      cleanup_interval_hours: parseInt(process.env.OTP_CLEANUP_INTERVAL_HOURS || '24')
+    };
 
-      this.config = {
-        length: parseInt(parsed.data.data.length),
-        expiry_minutes: parseInt(parsed.data.data.expiry_minutes),
-        max_attempts: parseInt(parsed.data.data.max_attempts),
-        rate_limit_per_hour: parseInt(parsed.data.data.rate_limit_per_hour),
-        cleanup_interval_hours: parseInt(parsed.data.data.cleanup_interval_hours)
-      };
-
-      return this.config;
-    } catch (error) {
-      console.error('Failed to load OTP config from Vault:', error);
-
-      // Fallback configuration
-      this.config = {
-        length: 6,
-        expiry_minutes: 5,
-        max_attempts: 3,
-        rate_limit_per_hour: 3,
-        cleanup_interval_hours: 24
-      };
-
-      return this.config;
-    }
+    return this.config;
   }
 
   /**

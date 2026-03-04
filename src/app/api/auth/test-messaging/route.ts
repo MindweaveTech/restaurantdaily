@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
           message: 'Twilio connection successful',
           data: {
             accountSid: connectionTest.accountSid?.slice(-8), // Show last 8 chars
-            vaultIntegration: 'working',
             timestamp: new Date().toISOString()
           }
         });
@@ -139,10 +138,6 @@ export async function GET() {
               totalCost: `₹${usageStats.totalCost.toFixed(2)}`,
               period: usageStats.period
             },
-            vault: {
-              status: 'connected',
-              secretsLoaded: ['sms', 'otp']
-            },
             timestamp: new Date().toISOString()
           }
         });
@@ -155,10 +150,6 @@ export async function GET() {
             connection: 'healthy',
             accountSid: connectionTest.accountSid?.slice(-8),
             usage: 'unavailable',
-            vault: {
-              status: 'connected',
-              secretsLoaded: ['sms', 'otp']
-            },
             timestamp: new Date().toISOString()
           }
         });

@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Building2, Bell, Shield, Palette, Save, Camera } from 'lucide-react';
+import { Building2, Bell, Shield, Palette, Save, Camera } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard';
 import { useState } from 'react';
 

@@ -3,9 +3,42 @@
 ## Overview
 Multi-restaurant architecture with role-based access control and data isolation using Supabase PostgreSQL with Row Level Security (RLS).
 
+**Supabase Project**: `hukaqbgfmerutzhtchiu`
+**Supabase URL**: `https://hukaqbgfmerutzhtchiu.supabase.co`
+
+## Role Hierarchy
+
+| Role | Description | Scope |
+|------|-------------|-------|
+| `superadmin` | Platform administrator | All restaurants |
+| `business_admin` | Restaurant owner/manager | Single restaurant |
+| `employee` | Restaurant staff | Single restaurant |
+
+---
+
 ## Core Tables
 
-### 1. restaurants
+### 1. system_admins
+Platform superadmins who manage the entire system.
+
+```sql
+CREATE TABLE system_admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) NOT NULL UNIQUE,
+  phone VARCHAR(20) UNIQUE,  -- Optional phone for OTP login
+  name VARCHAR(255),
+  status VARCHAR(20) DEFAULT 'active',  -- active, inactive, suspended
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_login TIMESTAMP WITH TIME ZONE
+);
+```
+
+**Initial Data**: `gaurav18115@gmail.com` (Gaurav Rao)
+
+---
+
+### 2. restaurants
 Primary table for restaurant information and settings.
 
 ```sql
@@ -16,25 +49,36 @@ CREATE TABLE restaurants (
   google_maps_link TEXT,
   phone VARCHAR(20) NOT NULL UNIQUE, -- Admin's phone (E.164 format)
   logo_url TEXT,
+
+  -- KYC Fields
+  gst_number VARCHAR(15) UNIQUE,     -- 15-char GSTIN
+  fssai_number VARCHAR(14),           -- 14-digit FSSAI license
+  kyc_verified BOOLEAN DEFAULT FALSE,
+  kyc_verified_at TIMESTAMP WITH TIME ZONE,
+
   settings JSONB DEFAULT '{}', -- Restaurant-specific settings
   status VARCHAR(20) DEFAULT 'active', -- active, inactive, suspended
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
   -- Constraints
-  CONSTRAINT valid_status CHECK (status IN ('active', 'inactive', 'suspended'))
+  CONSTRAINT valid_status CHECK (status IN ('active', 'inactive', 'suspended')),
+  CONSTRAINT chk_gst_format CHECK (gst_number IS NULL OR gst_number ~ '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$'),
+  CONSTRAINT chk_fssai_format CHECK (fssai_number IS NULL OR fssai_number ~ '^\d{14}$')
 );
 ```
 
-### 2. users
-Enhanced user table with restaurant associations and roles.
+### 3. users
+All system users with restaurant associations and role hierarchy.
 
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   phone VARCHAR(20) NOT NULL UNIQUE, -- E.164 format
+  email VARCHAR(255) UNIQUE,          -- Optional email
+  name VARCHAR(255),                   -- User's display name
   restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
-  role VARCHAR(20) NOT NULL DEFAULT 'staff', -- 'admin', 'staff'
+  role VARCHAR(20) NOT NULL DEFAULT 'employee', -- 'superadmin', 'business_admin', 'employee'
   permissions JSONB DEFAULT '[]', -- Array of specific permissions
   status VARCHAR(20) DEFAULT 'pending', -- pending, active, inactive
   invited_by UUID REFERENCES users(id), -- Who invited this user
@@ -44,15 +88,57 @@ CREATE TABLE users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
   -- Constraints
-  CONSTRAINT valid_role CHECK (role IN ('admin', 'staff')),
+  CONSTRAINT valid_role CHECK (role IN ('superadmin', 'business_admin', 'employee')),
   CONSTRAINT valid_status CHECK (status IN ('pending', 'active', 'inactive')),
   CONSTRAINT admin_must_have_restaurant CHECK (
-    role != 'admin' OR restaurant_id IS NOT NULL
+    role != 'business_admin' OR restaurant_id IS NOT NULL
   )
 );
 ```
 
-### 3. staff_invitations
+### 4. attendance_logs
+Staff check-in/check-out tracking with location and hours calculation.
+
+```sql
+CREATE TABLE attendance_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+
+  -- Check-in/out times
+  check_in_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  check_out_time TIMESTAMP WITH TIME ZONE,
+
+  -- Optional location tracking
+  check_in_lat DECIMAL(10, 8),
+  check_in_lng DECIMAL(11, 8),
+  check_out_lat DECIMAL(10, 8),
+  check_out_lng DECIMAL(11, 8),
+
+  -- Calculated fields (auto-updated on check-out)
+  hours_worked DECIMAL(5, 2),
+  overtime_hours DECIMAL(5, 2) DEFAULT 0,
+  break_minutes INTEGER DEFAULT 0,
+
+  -- Status and notes
+  status VARCHAR(20) DEFAULT 'checked_in', -- checked_in, checked_out, on_break, absent, late, early_leave
+  notes TEXT,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  -- Constraints
+  CONSTRAINT valid_attendance_status CHECK (status IN ('checked_in', 'checked_out', 'on_break', 'absent', 'late', 'early_leave')),
+  CONSTRAINT checkout_after_checkin CHECK (check_out_time IS NULL OR check_out_time > check_in_time)
+);
+```
+
+**Triggers**:
+- `attendance_auto_calculate_hours`: Auto-calculates `hours_worked` when check_out_time is set
+
+---
+
+### 5. staff_invitations
 Track staff invitation process and status.
 
 ```sql
@@ -61,7 +147,7 @@ CREATE TABLE staff_invitations (
   restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
   phone VARCHAR(20) NOT NULL, -- E.164 format
   invited_by UUID NOT NULL REFERENCES users(id),
-  role VARCHAR(20) NOT NULL DEFAULT 'staff',
+  role VARCHAR(20) NOT NULL DEFAULT 'employee',  -- Always 'employee'
   permissions JSONB DEFAULT '[]',
   status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, expired, cancelled
   invitation_token VARCHAR(255) UNIQUE, -- For secure invitation links
@@ -70,12 +156,37 @@ CREATE TABLE staff_invitations (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
   -- Constraints
-  CONSTRAINT valid_invitation_role CHECK (role IN ('staff')), -- Only staff can be invited
-  CONSTRAINT valid_invitation_status CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled')),
+  CONSTRAINT valid_invitation_role CHECK (role = 'employee'),
+  CONSTRAINT valid_invitation_status CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled'))
+);
 
-  -- Unique constraint to prevent duplicate invitations
-  UNIQUE(restaurant_id, phone, status)
-    WHERE status = 'pending'
+-- Unique index for pending invitations
+CREATE UNIQUE INDEX idx_unique_pending_invitations
+ON staff_invitations (restaurant_id, phone)
+WHERE status = 'pending';
+```
+
+---
+
+### 6. business_invitations
+Invitations sent by superadmins to potential business owners.
+
+```sql
+CREATE TABLE business_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invited_by UUID REFERENCES system_admins(id) ON DELETE SET NULL,
+  email VARCHAR(255),
+  phone VARCHAR(20) NOT NULL,  -- Phone is required for OTP auth
+  restaurant_name VARCHAR(255) NOT NULL,  -- Pre-fill restaurant name
+  role VARCHAR(20) DEFAULT 'business_admin',  -- Always 'business_admin'
+  status VARCHAR(20) DEFAULT 'pending', -- pending, accepted, expired, cancelled
+  invitation_token VARCHAR(255) UNIQUE NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  CONSTRAINT valid_business_invitation_role CHECK (role = 'business_admin'),
+  CONSTRAINT valid_business_invitation_status CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled'))
 );
 ```
 

@@ -5,7 +5,7 @@ import { DashboardShell } from '@/components/dashboard';
 import { useState } from 'react';
 
 export default function SalaryConfigPage() {
-  const [roles, setRoles] = useState([
+  const [roles] = useState([
     { id: 1, name: 'Chef', baseSalary: 35000, overtimeRate: 200, allowances: 3000 },
     { id: 2, name: 'Server', baseSalary: 25000, overtimeRate: 150, allowances: 2000 },
     { id: 3, name: 'Cashier', baseSalary: 28000, overtimeRate: 175, allowances: 2500 },

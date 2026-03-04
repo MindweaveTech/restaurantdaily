@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, UserPlus, Search, MoreVertical, Phone, Mail, CheckCircle, XCircle } from 'lucide-react';
+import { Users, UserPlus, Search, MoreVertical, Phone, Mail } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard';
 import { useState } from 'react';
 

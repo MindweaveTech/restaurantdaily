@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Download, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { FileText, Download, Calendar, TrendingUp } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard';
 
 export default function PayrollReportsPage() {

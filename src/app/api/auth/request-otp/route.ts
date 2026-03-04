@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { TwilioMessagingClient } from '@/lib/messaging/twilio-client';
 import { PhoneValidator } from '@/lib/messaging/phone-validator';
-import { OTPRateLimit } from '@/lib/messaging/otp-service';
+import { OTPRateLimit, OTPService } from '@/lib/messaging/otp-service';
 import { logAPI, logAuth } from '@/lib/logger';
+import { isSuperadminPhone } from '@/lib/constants';
 
 // Request validation schema
 const requestOTPSchema = z.object({
@@ -70,7 +71,42 @@ export async function POST(request: NextRequest) {
     // Record the attempt
     OTPRateLimit.recordAttempt(formattedPhone);
 
-    // Send OTP via Twilio
+    // Check if this is a superadmin phone - skip SMS and just log OTP
+    if (isSuperadminPhone(formattedPhone)) {
+      console.log('🔐 Superadmin phone detected - generating OTP without SMS');
+
+      try {
+        const generatedOTP = await OTPService.generateOTP(formattedPhone, purpose);
+
+        // OTP is already logged by OTPService.generateOTP()
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log(`🔑 SUPERADMIN OTP for ${formattedPhone}: ${generatedOTP.code}`);
+        console.log('═══════════════════════════════════════════════════════════');
+
+        logAuth('otp-generated', formattedPhone, true, { method: 'console', isSuperadmin: true });
+        logAPI('POST', '/api/auth/request-otp', 200, Date.now() - startTime);
+
+        return NextResponse.json({
+          success: true,
+          message: 'OTP generated (check server logs)',
+          data: {
+            phoneNumber: PhoneValidator.formatForDisplay(formattedPhone),
+            method: 'console', // Indicates OTP is in logs, not SMS
+            expiresIn: '5 minutes',
+            canResendIn: '1 minute',
+            isSuperadmin: true
+          }
+        });
+      } catch (error) {
+        console.error('Failed to generate OTP for superadmin:', error);
+        return NextResponse.json(
+          { success: false, error: 'Failed to generate OTP' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Send OTP via Twilio for regular users
     const messageResult = await TwilioMessagingClient.sendOTP({
       phoneNumber: formattedPhone,
       purpose,
@@ -101,7 +137,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: PhoneValidator.formatForDisplay(formattedPhone),
         method: messageResult.method,
         expiresIn: '5 minutes',
-        canResendIn: '1 minute' // Implement resend logic
+        canResendIn: '1 minute'
       }
     });
 

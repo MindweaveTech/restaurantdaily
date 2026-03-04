@@ -155,6 +155,8 @@ export class RestaurantService {
     phone: string;
     google_maps_link?: string;
     logo_url?: string;
+    gst_number?: string;
+    fssai_number?: string;
     settings?: Record<string, unknown>;
   }): Promise<Restaurant> {
 
@@ -164,6 +166,8 @@ export class RestaurantService {
       phone: data.phone,
       google_maps_link: data.google_maps_link || null,
       logo_url: data.logo_url || null,
+      gst_number: data.gst_number || null,
+      fssai_number: data.fssai_number || null,
       settings: data.settings || {},
       status: 'active' as const,
     };

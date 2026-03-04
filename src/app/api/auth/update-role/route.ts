@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { secretsManager } from '@/lib/secrets';
-import { userService, restaurantService, systemAdminService, businessInvitationService, staffInvitationService } from '@/lib/database';
+import { userService, restaurantService, businessInvitationService, staffInvitationService } from '@/lib/database';
 import type { UserRole } from '@/types';
+import { isSuperadminPhone } from '@/lib/constants';
 
 interface JWTPayload {
   phone: string;
@@ -13,9 +14,6 @@ interface JWTPayload {
   exp: number;
   iat: number;
 }
-
-// Superadmin email - hardcoded for security
-const SUPERADMIN_EMAIL = 'gaurav18115@gmail.com';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,21 +61,13 @@ export async function POST(request: NextRequest) {
 
     // Determine the user's role based on invitation or superadmin status
     if (role === 'superadmin') {
-      // Check if this phone belongs to a system admin
-      try {
-        const systemAdmin = await systemAdminService.getByPhone(decoded.phone);
-        if (systemAdmin && systemAdmin.email === SUPERADMIN_EMAIL) {
-          finalRole = 'superadmin';
-          userEmail = systemAdmin.email;
-          console.log(`✅ Superadmin login: ${decoded.phone}`);
-        } else {
-          return NextResponse.json(
-            { error: 'You are not authorized as a superadmin' },
-            { status: 403 }
-          );
-        }
-      } catch (error) {
-        console.log('Failed to verify superadmin:', error);
+      // Check if this phone is in the superadmin list
+      if (isSuperadminPhone(decoded.phone)) {
+        finalRole = 'superadmin';
+        userEmail = 'superadmin@restaurantdaily.mindweave.tech';
+        console.log(`✅ Superadmin login: ${decoded.phone}`);
+      } else {
+        console.log(`❌ Unauthorized superadmin attempt: ${decoded.phone}`);
         return NextResponse.json(
           { error: 'You are not authorized as a superadmin' },
           { status: 403 }
@@ -166,38 +156,50 @@ export async function POST(request: NextRequest) {
           );
         }
       }
-    } else if (role === 'business_admin' || role === 'employee') {
-      // Legacy support: check for existing user in database
+    } else if (role === 'business_admin') {
+      // Self-registration for restaurant admins is allowed
+      // They will need to complete KYC (GST/FSSAI) during onboarding
       try {
         const existingUser = await userService.getUserByPhone(decoded.phone);
         if (existingUser && existingUser.restaurant_id) {
-          // Map old roles to new roles (cast to string for comparison with legacy values)
-          const userRole = existingUser.role as string;
-          if (userRole === 'admin' || userRole === 'business_admin') {
-            finalRole = 'business_admin';
-          } else if (userRole === 'staff' || userRole === 'team_member' || userRole === 'employee') {
-            finalRole = 'employee';
-          } else if (userRole === 'superadmin') {
-            finalRole = 'superadmin';
-          } else {
-            // Default to the requested role
-            finalRole = role as UserRole;
-          }
+          // Existing user with restaurant - return their data
+          finalRole = 'business_admin';
           restaurantId = existingUser.restaurant_id;
           const restaurant = await restaurantService.getRestaurantById(restaurantId);
           restaurantName = restaurant?.name || null;
-          console.log(`✅ Existing user login: ${decoded.phone} as ${finalRole}`);
+          console.log(`✅ Existing business admin login: ${decoded.phone}`);
         } else {
-          // No invitation and no existing user - reject
+          // New user - allow registration, they'll complete onboarding
+          finalRole = 'business_admin';
+          console.log(`✅ New business admin registration: ${decoded.phone} (pending KYC)`);
+        }
+      } catch (error) {
+        // Allow new registration even if DB check fails
+        console.log('DB check failed, allowing new registration:', error);
+        finalRole = 'business_admin';
+      }
+    } else if (role === 'employee') {
+      // Employees still need invitation from a business admin
+      try {
+        const existingUser = await userService.getUserByPhone(decoded.phone);
+        if (existingUser && existingUser.restaurant_id) {
+          // Existing employee
+          finalRole = 'employee';
+          restaurantId = existingUser.restaurant_id;
+          const restaurant = await restaurantService.getRestaurantById(restaurantId);
+          restaurantName = restaurant?.name || null;
+          console.log(`✅ Existing employee login: ${decoded.phone}`);
+        } else {
+          // No invitation and no existing user - reject employees
           return NextResponse.json(
-            { error: 'You must have an invitation to register. Please contact an administrator.' },
+            { error: 'Staff members need an invitation to register. Please ask your restaurant manager to send you an invitation.' },
             { status: 403 }
           );
         }
       } catch (error) {
-        console.log('Failed to check existing user:', error);
+        console.log('Failed to check existing employee:', error);
         return NextResponse.json(
-          { error: 'You must have an invitation to register. Please contact an administrator.' },
+          { error: 'Staff members need an invitation to register. Please ask your restaurant manager to send you an invitation.' },
           { status: 403 }
         );
       }

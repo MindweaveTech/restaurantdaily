@@ -19,17 +19,53 @@ interface RestaurantData {
   cuisine?: string;
   phone?: string;
   email?: string;
+  // KYC fields
+  gstNumber?: string;
+  fssaiNumber?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: RestaurantData = await request.json();
-    const { name, address, googleMapsLink, description, cuisine, phone, email } = body;
+    const { name, address, googleMapsLink, description, cuisine, phone, email, gstNumber, fssaiNumber } = body;
 
     // Validate required fields
     if (!name?.trim() || !address?.trim()) {
       return NextResponse.json(
         { error: 'Restaurant name and address are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate KYC fields
+    if (!gstNumber?.trim()) {
+      return NextResponse.json(
+        { error: 'GST number is required for business verification' },
+        { status: 400 }
+      );
+    }
+
+    if (!fssaiNumber?.trim()) {
+      return NextResponse.json(
+        { error: 'FSSAI license number is required for food businesses' },
+        { status: 400 }
+      );
+    }
+
+    // Validate GST format (15 characters)
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i;
+    if (!gstRegex.test(gstNumber.trim())) {
+      return NextResponse.json(
+        { error: 'Invalid GST number format. Must be 15 characters (e.g., 22AAAAA0000A1Z5)' },
+        { status: 400 }
+      );
+    }
+
+    // Validate FSSAI format (14 digits)
+    const fssaiRegex = /^\d{14}$/;
+    if (!fssaiRegex.test(fssaiNumber.trim())) {
+      return NextResponse.json(
+        { error: 'Invalid FSSAI number format. Must be 14 digits' },
         { status: 400 }
       );
     }
@@ -89,6 +125,8 @@ export async function POST(request: NextRequest) {
       address: address.trim(),
       phone: decoded.phone, // Use admin's phone as restaurant contact
       google_maps_link: googleMapsLink,
+      gst_number: gstNumber.trim().toUpperCase(),
+      fssai_number: fssaiNumber.trim(),
       settings: {
         description: description || null,
         cuisine: cuisine || null,
@@ -96,6 +134,8 @@ export async function POST(request: NextRequest) {
         contact_email: email || null,
       },
     });
+
+    console.log(`✅ Restaurant created: ${restaurant.name} (GST: ${gstNumber}, FSSAI: ${fssaiNumber})`);
 
     // Create or update user record
     let user = existingUser;

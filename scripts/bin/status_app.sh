@@ -3,8 +3,10 @@
 # Restaurant Daily - Check Server Status
 # Usage: ./status_app.sh
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Navigate to actual project root (two levels up from scripts/bin/)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PID_FILE="$PROJECT_ROOT/.app.pid"
+LOG_FILE="$PROJECT_ROOT/.app.log"
 
 # Read PORT from .env.local (default: 3002)
 if [ -f "$PROJECT_ROOT/.env.local" ]; then
@@ -33,8 +35,8 @@ if kill -0 "$PID" 2>/dev/null; then
     ps aux | grep "$PID" | grep -v grep | awk '{print "  " $6 "KB"}'
     echo ""
     echo "Recent Logs:"
-    if [ -f "$PROJECT_ROOT/.app.log" ]; then
-        tail -5 "$PROJECT_ROOT/.app.log"
+    if [ -f "$LOG_FILE" ]; then
+        tail -5 "$LOG_FILE"
     else
         echo "  (No logs found)"
     fi

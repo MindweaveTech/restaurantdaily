@@ -3,7 +3,8 @@
 # Restaurant Daily - View Server Logs
 # Usage: ./logs_app.sh
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Navigate to actual project root (two levels up from scripts/bin/)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOG_FILE="$PROJECT_ROOT/.app.log"
 
 if [ ! -f "$LOG_FILE" ]; then

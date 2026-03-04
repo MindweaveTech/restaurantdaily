@@ -5,7 +5,8 @@
 
 set -e
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Navigate to actual project root (two levels up from scripts/bin/)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PID_FILE="$PROJECT_ROOT/.app.pid"
 
 if [ ! -f "$PID_FILE" ]; then

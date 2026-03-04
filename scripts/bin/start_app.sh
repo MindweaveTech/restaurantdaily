@@ -5,8 +5,10 @@
 
 set -e
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Navigate to actual project root (two levels up from scripts/bin/)
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PID_FILE="$PROJECT_ROOT/.app.pid"
+LOG_FILE="$PROJECT_ROOT/.app.log"
 
 # Read PORT from .env.local (default: 3002)
 if [ -f "$PROJECT_ROOT/.env.local" ]; then
@@ -32,7 +34,7 @@ echo "📍 URL: http://localhost:$PORT"
 cd "$PROJECT_ROOT"
 
 # Start the dev server in background and capture PID
-PORT=$PORT npm run dev > .app.log 2>&1 &
+PORT=$PORT npm run dev > "$LOG_FILE" 2>&1 &
 APP_PID=$!
 
 # Save PID

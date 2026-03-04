@@ -14,7 +14,7 @@ export default function VerifyOTPPage() {
   const [otpMethod, setOtpMethod] = useState<'sms' | 'whatsapp'>('sms');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [timeLeft, setTimeLeft] = useState(60); // 60 seconds
   const [canResend, setCanResend] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -168,7 +168,7 @@ export default function VerifyOTPPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setTimeLeft(300);
+        setTimeLeft(60);
         setCanResend(false);
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();

@@ -22,13 +22,23 @@ export interface OTPValidationResult {
   error?: string;
 }
 
+// Global OTP store that persists across hot reloads in development
+const globalForOTP = globalThis as unknown as {
+  otpStore: Map<string, { otp: GeneratedOTP; attempts: number }> | undefined;
+};
+
+if (!globalForOTP.otpStore) {
+  globalForOTP.otpStore = new Map();
+}
+
+const otpStore = globalForOTP.otpStore;
+
 /**
  * Secure OTP generation and validation service
  * Configuration via environment variables (local: .env.local, production: Vercel/GitHub)
  */
 export class OTPService {
   private static config: OTPConfig | null = null;
-  private static otpStore: Map<string, { otp: GeneratedOTP; attempts: number }> = new Map();
 
   /**
    * Get OTP configuration from environment variables
@@ -79,7 +89,10 @@ export class OTPService {
     };
 
     // Store OTP for verification
-    this.otpStore.set(phoneNumber, { otp: generatedOTP, attempts: 0 });
+    otpStore.set(phoneNumber, { otp: generatedOTP, attempts: 0 });
+
+    console.log(`📱 OTP generated for ${phoneNumber}: ${code} (expires: ${expiresAt.toISOString()})`);
+    console.log(`📦 OTP Store size: ${otpStore.size}`);
 
     return generatedOTP;
   }
@@ -92,21 +105,27 @@ export class OTPService {
     code: string
   ): Promise<OTPValidationResult> {
     const config = await this.getConfig();
-    const storedData = this.otpStore.get(phoneNumber);
+    const storedData = otpStore.get(phoneNumber);
+
+    console.log(`🔍 Verifying OTP for ${phoneNumber}: entered=${code}`);
+    console.log(`📦 OTP Store size: ${otpStore.size}, keys: [${Array.from(otpStore.keys()).join(', ')}]`);
 
     // Check if OTP exists
     if (!storedData) {
+      console.log(`❌ No OTP found for ${phoneNumber}`);
       return {
         isValid: false,
         error: 'No verification code found. Please request a new one.'
       };
     }
 
+    console.log(`📋 Stored OTP: ${storedData.otp.code}, attempts: ${storedData.attempts}`);
+
     const { otp, attempts } = storedData;
 
     // Check if too many attempts
     if (attempts >= config.max_attempts) {
-      this.otpStore.delete(phoneNumber); // Clean up
+      otpStore.delete(phoneNumber); // Clean up
       return {
         isValid: false,
         error: 'Too many failed attempts. Please request a new code.'
@@ -115,7 +134,7 @@ export class OTPService {
 
     // Check if expired
     if (this.isExpired(otp.expiresAt)) {
-      this.otpStore.delete(phoneNumber); // Clean up
+      otpStore.delete(phoneNumber); // Clean up
       return {
         isValid: false,
         isExpired: true,
@@ -128,7 +147,7 @@ export class OTPService {
 
     // Verify code
     if (otp.code === code) {
-      this.otpStore.delete(phoneNumber); // Clean up on success
+      otpStore.delete(phoneNumber); // Clean up on success
       return {
         isValid: true
       };
@@ -138,7 +157,7 @@ export class OTPService {
     const remainingAttempts = config.max_attempts - storedData.attempts;
 
     if (remainingAttempts <= 0) {
-      this.otpStore.delete(phoneNumber); // Clean up after max attempts
+      otpStore.delete(phoneNumber); // Clean up after max attempts
       return {
         isValid: false,
         error: 'Too many failed attempts. Please request a new code.'

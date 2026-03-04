@@ -54,3 +54,5 @@ logs/
 .vault-token
 .turbopack/
 .screenshots/
+.playwright-mcp/
+*.png

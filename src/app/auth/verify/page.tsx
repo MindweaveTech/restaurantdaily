@@ -186,7 +186,7 @@ export default function VerifyOTPPage() {
   const maskPhoneNumber = (phone: string) => {
     if (phone.length <= 4) return phone;
     const visiblePart = phone.slice(-4);
-    const maskedPart = '*'.repeat(phone.length - 4);
+    const maskedPart = '•'.repeat(phone.length - 4);
     return maskedPart + visiblePart;
   };
 

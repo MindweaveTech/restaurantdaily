@@ -118,8 +118,6 @@ export default function RoleSelectionPage() {
           router.push('/onboarding/staff-welcome');
         }
       } else {
-        console.error('Failed to update role:', data.error);
-
         // If the error is authentication-related, redirect to login
         if (response.status === 401) {
           console.log('Authentication failed, redirecting to login');
@@ -130,8 +128,11 @@ export default function RoleSelectionPage() {
 
         // Show user-friendly error message
         if (data.error?.includes('invitation')) {
+          // This is an expected flow for new users without invitations
+          console.log('User requires invitation to register');
           setError('You need an invitation to register. Please contact your restaurant administrator to receive an invitation link.');
         } else {
+          console.error('Failed to update role:', data.error);
           setError(data.error || 'Failed to complete registration. Please try again.');
         }
       }

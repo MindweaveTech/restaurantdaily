@@ -120,7 +120,50 @@ Mobile-first restaurant performance tracking app with cash management, voucher t
 
 **Status**: Restaurant management system fully operational with production database, comprehensive E2E testing (31 tests), authentication fixes, role selection flow working, and security hardening complete
 
-### Phase 4: Core Business Features (CURRENT)
+### Phase 4: Self-Registration & KYC (CURRENT)
+
+#### 4.1 Self-Registration for Restaurant Admins
+1. **Remove invitation requirement for admins** - Allow direct registration
+2. **Basic info collection** - Restaurant name, owner name, phone (already verified)
+3. **Email collection** - Optional, for receipts and notifications
+4. **Terms acceptance** - ToS and Privacy Policy consent
+
+#### 4.2 Business KYC Verification (India-specific)
+| Document | Priority | Provider | Purpose |
+|----------|----------|----------|---------|
+| **FSSAI License** | Critical | Surepass | Mandatory for food businesses |
+| **PAN** | High | Surepass/Signzy | Business/proprietor identity |
+| **GSTIN** | High | Surepass/Signzy | Tax compliance verification |
+| **Bank Account** | Critical | Cashfree | For payouts/refunds |
+
+**Recommended KYC Flow:**
+```
+1. Phone OTP (already done) ✅
+2. Basic Info Collection
+3. FSSAI License Verification → instant API check
+4. PAN Verification → instant API check
+5. GSTIN Verification (if registered) → instant API check
+6. Bank Account via UPI VPA → instant verification
+7. Account activated → Ready for operations
+```
+
+#### 4.3 Bank Account & Payouts Integration
+- **Provider**: Cashfree Payouts (recommended)
+  - UPI VPA verification (free with Payouts)
+  - Reverse Penny Drop for bank account verification
+  - 24x7 payouts via IMPS/UPI
+  - Bulk payout support
+- **Alternative**: Razorpay/RazorpayX
+- **Use Cases**: Staff salary payouts, vendor payments, refunds
+
+#### 4.4 Verification API Providers
+| Provider | Services | Pricing |
+|----------|----------|---------|
+| [Surepass](https://surepass.io/) | GST, FSSAI, PAN, Shop & Establishment | Pay-as-you-go |
+| [Signzy](https://signzy.com/) | GST, PAN, Bank verification | Pay-as-you-go |
+| [Cashfree](https://cashfree.com/) | Bank verification, UPI, Payouts | Per-transaction |
+
+### Phase 5: Core Business Features
 1. **Staff Invitation System** - WhatsApp-based team member invitations
 2. **Staff Management Dashboard** - Admin interface for team management
 3. **Cash Session Management** - Start/end sessions with balance tracking
@@ -129,14 +172,14 @@ Mobile-first restaurant performance tracking app with cash management, voucher t
 6. **Receipt Attachment System** - Photo upload and documentation
 7. **Session Reports & Analytics** - Daily/weekly performance summaries
 
-### Phase 5: Advanced Operations & Monitoring
+### Phase 6: Advanced Operations & Monitoring
 1. **Electricity Payment Monitoring** - Due date tracking and vendor management
 2. **Advanced Reporting Dashboard** - Multi-dimensional analytics
 3. **Real-time Notifications** - Supabase realtime integration
 4. **Audit Logs & Compliance** - Complete activity tracking
 5. **Performance Optimization** - Query optimization and caching
 
-### Phase 6: Polish & Advanced Features
+### Phase 7: Polish & Advanced Features
 1. ✅ SSL/HTTPS setup for production
 2. ✅ Database migration to PostgreSQL (Supabase)
 3. Real-time notifications using Supabase realtime
@@ -144,3 +187,71 @@ Mobile-first restaurant performance tracking app with cash management, voucher t
 5. Mobile app version (React Native)
 6. SMS fallback after Twilio account upgrade
 7. Advanced security monitoring and audit logs
+
+---
+
+## KYC & Payments Technical Reference
+
+### India-Specific Compliance Requirements
+- **FSSAI License**: Mandatory for all food businesses (14-digit number)
+- **GSTIN**: Required if turnover > ₹40 lakh (₹20 lakh for services)
+- **PAN**: Required for all business bank accounts
+- **Shop & Establishment**: State-level business registration
+
+### FSSAI Verification API
+```javascript
+// Example: Surepass FSSAI API
+POST /api/v1/fssai/verify
+{
+  "fssai_number": "10019022000015"
+}
+// Returns: company_name, license_status, expiry_date, district
+```
+
+### GST Verification API
+```javascript
+// Example: Signzy/Surepass GST API
+POST /api/v1/gst/verify
+{
+  "gstin": "29AABCU9603R1ZM"
+}
+// Returns: legal_name, trade_name, status, address, constitution
+```
+
+### Bank Account Verification Options
+1. **UPI VPA Verification** (Recommended - instant, free with Cashfree)
+   - User provides UPI ID (e.g., business@upi)
+   - Returns account holder name for verification
+
+2. **Penny Drop** (Traditional - ₹1-2 per verification)
+   - Deposits ₹1 to account
+   - Returns account holder name
+   - 91% success rate
+
+3. **Reverse Penny Drop** (Higher accuracy)
+   - User initiates ₹1 payment
+   - Confirms account ownership
+
+### Payout Integration (Cashfree)
+```javascript
+// Example: Create Payout
+POST /payout/v1/authorize
+{
+  "beneId": "JOHN18012",
+  "amount": "1000.00",
+  "transferMode": "upi",
+  "beneDetails": {
+    "vpa": "staff@upi"
+  }
+}
+```
+
+### Cost Estimates (Per Transaction)
+| Service | Provider | Cost |
+|---------|----------|------|
+| FSSAI Verification | Surepass | ₹2-5 |
+| GST Verification | Surepass | ₹2-5 |
+| PAN Verification | Surepass | ₹2-5 |
+| UPI VPA Verification | Cashfree | Free (with Payouts) |
+| Penny Drop | Cashfree | ₹2-3 |
+| Payout (UPI/IMPS) | Cashfree | ₹5-10 |

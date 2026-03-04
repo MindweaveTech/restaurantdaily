@@ -10,7 +10,7 @@ export default function VerifyOTPPage() {
   const router = useRouter();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [otpMethod, setOtpMethod] = useState<'whatsapp' | 'sms'>('whatsapp');
+  const [otpMethod, setOtpMethod] = useState<'sms' | 'whatsapp'>('sms');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
@@ -22,7 +22,7 @@ export default function VerifyOTPPage() {
   // Get pending phone number and method from session storage
   useEffect(() => {
     const pendingPhone = sessionStorage.getItem('pendingPhone');
-    const method = sessionStorage.getItem('otpMethod') as 'whatsapp' | 'sms';
+    const method = sessionStorage.getItem('otpMethod') as 'sms' | 'whatsapp';
 
     if (!pendingPhone) {
       // No pending OTP, redirect to phone input
@@ -31,7 +31,7 @@ export default function VerifyOTPPage() {
     }
 
     setPhoneNumber(pendingPhone);
-    setOtpMethod(method || 'whatsapp');
+    setOtpMethod(method || 'sms');
   }, [router]);
 
   // Countdown timer
@@ -230,7 +230,7 @@ export default function VerifyOTPPage() {
             </h1>
 
             <p className="text-sm sm:text-base text-gray-600 mb-1 px-2 sm:px-0">
-              We sent a 6-digit code via {otpMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'} to:
+              We sent a 6-digit code via {otpMethod === 'sms' ? 'SMS' : 'WhatsApp'} to:
             </p>
 
             <p className="font-medium text-gray-800 mb-4 text-sm sm:text-base">
@@ -338,7 +338,7 @@ export default function VerifyOTPPage() {
           {/* Help Text */}
           <div className="mt-4 sm:mt-6 text-center">
             <p className="text-xs sm:text-sm text-gray-500 mb-1 px-2 sm:px-0">
-              Didn&apos;t receive the code? Check your {otpMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'} and try resending.
+              Didn&apos;t receive the code? Check your {otpMethod === 'sms' ? 'SMS' : 'WhatsApp'} and try resending.
             </p>
             <p className="text-xs text-gray-400">
               Make sure you have a stable internet connection.

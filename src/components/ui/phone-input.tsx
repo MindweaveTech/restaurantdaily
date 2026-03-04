@@ -229,7 +229,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(({
       {/* Help Text */}
       {!phoneNumber.trim() && !displayError && (
         <p className="mt-2 text-sm text-gray-500">
-          Enter your mobile number to receive verification code via WhatsApp
+          Enter your mobile number to receive verification code via SMS
         </p>
       )}
     </div>

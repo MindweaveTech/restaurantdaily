@@ -37,7 +37,7 @@ export default function PhoneAuthPage() {
         },
         body: JSON.stringify({
           phoneNumber: phoneNumber.trim(),
-          preferredMethod: 'whatsapp', // Default to WhatsApp for better UX
+          preferredMethod: 'sms', // SMS delivery
         }),
       });
 
@@ -46,7 +46,7 @@ export default function PhoneAuthPage() {
       if (response.ok) {
         // Store phone number for OTP verification page
         sessionStorage.setItem('pendingPhone', phoneNumber.trim());
-        sessionStorage.setItem('otpMethod', data.method || 'whatsapp');
+        sessionStorage.setItem('otpMethod', data.method || 'sms');
 
         // Navigate to OTP verification page
         router.push('/auth/verify');
@@ -142,7 +142,7 @@ export default function PhoneAuthPage() {
             </button>
 
             <p id="submit-help" className="text-xs text-gray-500 text-center">
-              We&apos;ll send a 6-digit code via WhatsApp to verify your number
+              We&apos;ll send a 6-digit code via SMS to verify your number
             </p>
           </div>
 
@@ -161,7 +161,7 @@ export default function PhoneAuthPage() {
           {/* Help Text */}
           <div className="mt-4 sm:mt-6 text-center">
             <p className="text-xs sm:text-sm text-gray-500 mb-2 px-2 sm:px-0">
-              Having trouble? Check that your number is correct and you have WhatsApp installed.
+              Having trouble? Check that your number is correct and can receive SMS.
             </p>
             <Link
               href="/"

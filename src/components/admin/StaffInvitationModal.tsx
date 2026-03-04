@@ -99,7 +99,7 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
 
       setMessage({
         type: 'success',
-        text: `Invitation sent successfully to ${phoneNumber} via WhatsApp!`
+        text: `Invitation sent successfully to ${phoneNumber} via SMS!`
       });
       setPhoneNumber('');
 
@@ -240,7 +240,7 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
                 Invite Team Member
               </h3>
               <p className="text-gray-600 mb-6">
-                Send a WhatsApp invitation to add a new team member to your restaurant.
+                Send an SMS invitation to add a new team member to your restaurant.
               </p>
 
               <form onSubmit={handleInvite} className="space-y-4">
@@ -284,7 +284,7 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Send WhatsApp Invitation
+                      Send SMS Invitation
                     </>
                   )}
                 </button>

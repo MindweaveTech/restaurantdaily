@@ -3,10 +3,9 @@ import { z } from 'zod';
 import { TwilioMessagingClient } from '@/lib/messaging/twilio-client';
 import { PhoneValidator } from '@/lib/messaging/phone-validator';
 
-// Test request validation schema
+// Test request validation schema (SMS only)
 const testMessageSchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  method: z.enum(['whatsapp', 'sms']).optional().default('sms'),
   testType: z.enum(['connection', 'message']).optional().default('connection')
 });
 
@@ -27,7 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { phoneNumber, method, testType } = validation.data;
+    const { phoneNumber, testType } = validation.data;
 
     // Test connection only
     if (testType === 'connection') {
@@ -70,19 +69,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Send test message
+      // Send test SMS message
       const messageResult = await TwilioMessagingClient.sendTestMessage(
-        phoneValidation.formatted!,
-        method
+        phoneValidation.formatted!
       );
 
       if (messageResult.success) {
         return NextResponse.json({
           success: true,
-          message: `Test ${method} message sent successfully`,
+          message: 'Test SMS sent successfully',
           data: {
             phoneNumber: PhoneValidator.formatForDisplay(phoneValidation.formatted!),
-            method: messageResult.method,
+            method: 'sms',
             messageSid: messageResult.messageSid,
             cost: messageResult.cost,
             deliveryStatus: messageResult.deliveryStatus
@@ -92,7 +90,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: `Test ${method} message failed`,
+            error: 'Test SMS failed',
             details: messageResult.error
           },
           { status: 500 }

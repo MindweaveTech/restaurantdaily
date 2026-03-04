@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "Restaurant Daily Operations Management | Cash, Payments & Team Tracking",
-  description: "Simplify restaurant operations with daily cash reconciliation, payment tracking, and team management. WhatsApp OTP login. Mobile-first. Built for Indian restaurants.",
-  keywords: ["restaurant management software", "daily operations", "cash tracking", "payment management", "restaurant POS", "team management", "WhatsApp OTP"],
+  description: "Simplify restaurant operations with daily cash reconciliation, payment tracking, and team management. SMS OTP login. Mobile-first. Built for Indian restaurants.",
+  keywords: ["restaurant management software", "daily operations", "cash tracking", "payment management", "restaurant POS", "team management", "SMS OTP"],
   authors: [{ name: "Mindweave Technologies" }],
   icons: {
     icon: '/logo.png',
@@ -44,9 +45,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
         {children}
       </body>

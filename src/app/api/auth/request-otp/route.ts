@@ -9,7 +9,8 @@ import { logAPI, logAuth, logError } from '@/lib/logger';
 const requestOTPSchema = z.object({
   phoneNumber: z.string().min(1, 'Phone number is required'),
   purpose: z.enum(['login', 'registration', 'password_reset']).optional().default('login'),
-  preferredMethod: z.enum(['whatsapp', 'sms', 'auto']).optional().default('auto')
+  // SMS is now the only delivery method
+  preferredMethod: z.enum(['sms']).optional().default('sms')
 });
 
 export async function POST(request: NextRequest) {

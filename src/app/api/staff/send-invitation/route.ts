@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://restaurant-daily.mindweave.tech';
     const invitationLink = `${baseUrl}/staff/accept-invitation?token=${invitation.invitation_token}`;
 
-    // Send WhatsApp invitation
+    // Send SMS invitation
     const messageResult = await TwilioMessagingClient.sendStaffInvitation(
       invitation.phone,
       restaurant.name,
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Invitation sent successfully via WhatsApp',
+      message: 'Invitation sent successfully via SMS',
       messageSid: messageResult.messageSid,
       method: messageResult.method,
       cost: messageResult.cost

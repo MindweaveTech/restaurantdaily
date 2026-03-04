@@ -6,8 +6,8 @@ import { PhoneValidator } from '@/lib/messaging/phone-validator';
 import { TwilioMessagingClient } from '@/lib/messaging/twilio-client';
 import type { UserRole } from '@/types';
 
-// Note: TwilioMessagingClient doesn't have a public sendWhatsApp method
-// We'll use sendTestMessage for now or add a custom invite message method later
+// Note: Staff invitations are sent via SMS
+// TwilioMessagingClient.sendStaffInvitation handles SMS delivery
 
 interface JWTPayload {
   phone: string;
@@ -95,17 +95,20 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://restaurant-daily.mindweave.tech';
     const invitationUrl = `${baseUrl}/auth/phone?invitation=${invitation.invitation_token}`;
 
-    // Send WhatsApp invitation message (using test message for now)
+    // Send SMS invitation message
     try {
-      // TODO: Add a public sendCustomWhatsApp method to TwilioMessagingClient
-      // For now, log the invitation URL that should be shared
       console.log(`✅ Business invitation created for ${phoneValidation.formatted}`);
       console.log(`📱 Invitation URL: ${invitationUrl}`);
 
-      // Attempt to send a test message to notify them
-      await TwilioMessagingClient.sendTestMessage(phoneValidation.formatted!, 'whatsapp');
+      // Send SMS invitation
+      await TwilioMessagingClient.sendStaffInvitation(
+        phoneValidation.formatted!,
+        restaurantName.trim(),
+        invitationUrl,
+        invitation.expires_at
+      );
     } catch (error) {
-      console.error('Failed to send WhatsApp notification:', error);
+      console.error('Failed to send SMS notification:', error);
       // Don't fail the request, invitation is still created
     }
 

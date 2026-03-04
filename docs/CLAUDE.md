@@ -105,8 +105,8 @@ git push origin main  # Triggers full quality gate pipeline
 - **Frontend**: Next.js 15.5.3 with TypeScript
 - **Database**: Supabase (PostgreSQL with real-time features)
 - **Secrets Management**: HashiCorp Vault v1.20.3
-- **Authentication**: WhatsApp/SMS OTP via Twilio (production ready)
-- **Messaging**: Twilio WhatsApp Business API (sandbox mode)
+- **Authentication**: SMS OTP via Twilio (production ready)
+- **Messaging**: Twilio SMS API
 - **Styling**: Tailwind CSS (mobile-first responsive)
 - **State Management**: Zustand
 - **Forms**: React Hook Form with Zod validation
@@ -160,11 +160,11 @@ git push origin main  # Triggers full quality gate pipeline
 ### Project Context
 - Next.js React app for restaurant performance tracking
 - Mobile-first responsive design (optimized for iPhone/tablets)
-- Authentication: phone → WhatsApp OTP → role selection (production ready)
+- Authentication: phone → SMS OTP → role selection (production ready)
 - Features: cash sessions, petty vouchers, electricity payments
 - Role-based access (admin/team members)
 - Real-time updates and mobile-friendly interface
-- Secure messaging via Twilio WhatsApp Business API
+- Secure messaging via Twilio SMS API
 
 ### Quick Access
 - **Local Development**: http://localhost:3001
@@ -287,6 +287,40 @@ VAULT_TOKEN='[YOUR_TOKEN]' VAULT_ADDR='http://127.0.0.1:8200' pm2 restart restau
 - **Project URL**: https://hukaqbgfmerutzhtchiu.supabase.co
 - **Secrets Location**: Stored in Vault at `secret/supabase`
 
+#### Local Supabase (Development) ✅ RECOMMENDED
+Use local Supabase for development to avoid affecting production data.
+
+**Start Local Supabase:**
+```bash
+supabase start      # Start all containers (PostgreSQL, Auth, Storage, Studio)
+supabase stop       # Stop all containers
+supabase status     # Check status and get URLs/keys
+```
+
+**Local URLs & Keys (auto-configured in .env.local):**
+- **API URL**: http://127.0.0.1:54321
+- **Studio URL**: http://127.0.0.1:54323 (Database UI)
+- **Database**: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+- **Anon Key**: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+- **Service Key**: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+
+**Database Commands:**
+```bash
+# Query database via Docker
+docker exec supabase_db_restaurant-daily psql -U postgres -d postgres -c "SELECT * FROM users;"
+
+# Reset database (rerun all migrations)
+supabase db reset
+
+# Create new migration
+supabase migration new <migration_name>
+```
+
+**Switching Between Local and Cloud:**
+- **Local Dev**: Uses `.env.local` environment variables (auto-configured)
+- **Production**: Uses Vault secrets (no .env.local on server)
+- The app automatically uses environment variables when Vault is unavailable
+
 #### Database Schema Planning
 - **Users**: Phone-based authentication with roles (admin/team)
 - **Cash Sessions**: Opening/closing balance tracking
@@ -318,23 +352,23 @@ vault kv get secret/sms
 - **Fallback**: Uses .env.local only when Vault unavailable
 - **Production**: Remove .env.local fallbacks for security
 
-### 📱 Twilio WhatsApp Integration (Production Ready)
+### 📱 Twilio SMS Integration (Production Ready)
 
-#### Current Status: ✅ FULLY WORKING (2025-09-14)
-- **WhatsApp Number**: `+14155238886` (sandbox mode)
+#### Current Status: ✅ FULLY WORKING (2026-03-04)
+- **SMS Number**: `+14155238886` (Twilio)
 - **Account SID**: Stored securely in Vault `secret/sms` ✅ ACTIVE
 - **Auth Token**: Stored securely in Vault `secret/sms` ✅ WORKING
-- **Delivery Method**: WhatsApp-primary with SMS fallback (when upgraded)
-- **Cost**: ₹0.35/message (WhatsApp), no base costs
+- **Delivery Method**: SMS-only
+- **Cost**: ~₹0.50/message (SMS)
 - **Coverage**: Global (perfect for Indian restaurant market)
-- **Status**: Real phone numbers receiving WhatsApp messages ✅
+- **Status**: Real phone numbers receiving SMS messages ✅
 
 #### Quick Test Commands
 ```bash
-# Test WhatsApp OTP delivery
+# Test SMS OTP delivery
 curl -X POST https://restaurant-daily.mindweave.tech/api/auth/request-otp \
   -H "Content-Type: application/json" \
-  -d '{"phoneNumber": "+918826175074", "preferredMethod": "whatsapp"}'
+  -d '{"phoneNumber": "+918826175074", "preferredMethod": "sms"}'
 
 # Run full integration test suite
 node test-twilio-messaging.mjs
@@ -372,21 +406,13 @@ vault kv put secret/otp \
 - **Resend OTP**: `POST /api/auth/resend-otp`
 - **Test Messaging**: `POST /api/auth/test-messaging`
 
-#### SMS Upgrade Path
-When ready to upgrade from sandbox to full SMS:
-1. Purchase Twilio phone number (₹70-150/month)
-2. Update `from_number` in Vault
-3. System automatically enables SMS fallback
-4. See `SMS_UPGRADE_GUIDE.md` for details
-
 #### Integration Features
 - ✅ Phone number validation (E.164 format)
-- ✅ WhatsApp rich templates with branding
+- ✅ SMS message delivery
 - ✅ Rate limiting (3 OTPs per hour)
 - ✅ OTP expiration (5 minutes)
 - ✅ Comprehensive error handling
 - ✅ Audit logging
-- ✅ Cost optimization (WhatsApp-primary)
 - ✅ Production-ready security
 
 ### 🔧 CURRENT WORKING SETUP SUMMARY (2025-09-19)
@@ -394,12 +420,12 @@ When ready to upgrade from sandbox to full SMS:
 #### ✅ All Systems Operational
 - **Production App**: PM2 managed, auto-restart enabled
 - **Vault Server**: Development mode, all secrets configured
-- **Twilio Integration**: Real WhatsApp messages working
+- **Twilio Integration**: Real SMS messages working
 - **Authentication Flow**: Complete phone → OTP → login
 - **Database**: Supabase PostgreSQL with RLS deployed
 
 #### Authentication Flow
-✅ **Phone-based OTP**: All users authenticate via phone with WhatsApp/SMS OTP
+✅ **Phone-based OTP**: All users authenticate via phone with SMS OTP
 ✅ **Role Selection**: All users go through role selection to set up their account
 ✅ **Secure Tokens**: JWT tokens issued after OTP verification
 ✅ **Session Management**: Token stored in localStorage, cleared on logout

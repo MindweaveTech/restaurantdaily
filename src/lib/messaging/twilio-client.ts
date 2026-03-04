@@ -75,7 +75,7 @@ export class TwilioMessagingClient {
   }
 
   /**
-   * Send OTP via WhatsApp or SMS with automatic fallback
+   * Send OTP via SMS (primary method)
    */
   static async sendOTP(options: SendOTPOptions): Promise<MessageResult> {
     try {
@@ -95,59 +95,15 @@ export class TwilioMessagingClient {
         options.purpose || 'login'
       );
 
-      // Determine delivery method
-      const deliveryMethod = options.preferredMethod ||
-        phoneUtils.getPreferredMethod(phoneValidation.formatted!);
-
-      if (deliveryMethod === 'none') {
-        return {
-          success: false,
-          method: 'sms',
-          error: 'Phone number cannot receive messages'
-        };
-      }
-
       // Prepare message data
       const messageData: OTPMessageData = {
         otpCode: otp.code,
         expiryTime: OTPService.getExpiryTimeText(otp.expiresAt)
       };
 
-      // Try WhatsApp first if preferred or auto
-      if (deliveryMethod === 'whatsapp' || deliveryMethod === 'auto') {
-        const whatsappResult = await this.sendWhatsApp(phoneValidation.formatted!, messageData);
-        if (whatsappResult.success) {
-          return whatsappResult;
-        }
-
-        // If WhatsApp fails and we're in auto mode, log the issue
-        // SMS fallback not available in sandbox mode
-        if (deliveryMethod === 'auto') {
-          console.log('WhatsApp delivery failed. SMS fallback not available (sandbox mode).');
-          return {
-            success: false,
-            method: 'whatsapp',
-            error: 'WhatsApp delivery failed and SMS not available in sandbox mode'
-          };
-        }
-
-        return whatsappResult;
-      }
-
-      // SMS requested but not available in sandbox mode
-      if (deliveryMethod === 'sms') {
-        return {
-          success: false,
-          method: 'sms',
-          error: 'SMS not available in sandbox mode. Please upgrade Twilio account or use WhatsApp.'
-        };
-      }
-
-      return {
-        success: false,
-        method: 'sms',
-        error: 'No messaging method available'
-      };
+      // Send via SMS (primary method)
+      const smsResult = await this.sendSMS(phoneValidation.formatted!, messageData);
+      return smsResult;
 
     } catch (error) {
       console.error('Error sending OTP:', error);
@@ -307,26 +263,21 @@ Keep this code secure and don't share it.`;
   }
 
   /**
-   * Send test message for validation
+   * Send test message for validation (SMS only)
    */
   static async sendTestMessage(
-    phoneNumber: string,
-    method: 'whatsapp' | 'sms' = 'sms'
+    phoneNumber: string
   ): Promise<MessageResult> {
     const testData: OTPMessageData = {
       otpCode: '123456',
       expiryTime: '5 minutes'
     };
 
-    if (method === 'whatsapp') {
-      return await this.sendWhatsApp(phoneNumber, testData);
-    } else {
-      return await this.sendSMS(phoneNumber, testData);
-    }
+    return await this.sendSMS(phoneNumber, testData);
   }
 
   /**
-   * Send staff invitation via WhatsApp
+   * Send staff invitation via SMS
    */
   static async sendStaffInvitation(
     phoneNumber: string,
@@ -340,7 +291,7 @@ Keep this code secure and don't share it.`;
       if (!phoneValidation.isValid) {
         return {
           success: false,
-          method: 'whatsapp',
+          method: 'sms',
           error: phoneValidation.error
         };
       }
@@ -357,48 +308,33 @@ Keep this code secure and don't share it.`;
       const client = await this.getClient();
       const credentials = await this.getCredentials();
 
-      // Create invitation message
-      const messageBody = `🍽️ *Restaurant Daily* - Staff Invitation
+      // Create SMS invitation message (shorter for SMS)
+      const messageBody = `Restaurant Daily: You're invited to join ${restaurantName}. Accept here: ${invitationLink} (expires ${formattedExpiry})`;
 
-Hi! You've been invited to join *${restaurantName}* as a team member.
-
-📱 *Accept your invitation:*
-${invitationLink}
-
-⏰ *This invitation expires on:* ${formattedExpiry}
-
-Welcome to the team! 🎉
-
----
-Restaurant Daily - Performance Tracking Made Simple`;
-
-      // Format phone number for WhatsApp
-      const whatsappNumber = phoneUtils.toWhatsAppFormat(phoneValidation.formatted!);
-
-      // Send WhatsApp message
+      // Send SMS
       const message = await client.messages.create({
-        from: credentials.whatsappNumber,
-        to: whatsappNumber,
+        from: credentials.fromNumber,
+        to: phoneValidation.formatted!,
         body: messageBody
       });
 
       const countryCode = PhoneValidator.getCountryCode(phoneNumber) || 'IN';
-      const estimatedCost = MessageTemplates.getEstimatedCost('whatsapp', countryCode);
+      const estimatedCost = MessageTemplates.getEstimatedCost('sms', countryCode);
 
       return {
         success: true,
         messageSid: message.sid,
-        method: 'whatsapp',
+        method: 'sms',
         cost: estimatedCost,
         deliveryStatus: message.status
       };
 
     } catch (error) {
-      console.error('WhatsApp invitation failed:', error);
+      console.error('SMS invitation failed:', error);
       return {
         success: false,
-        method: 'whatsapp',
-        error: error instanceof Error ? error.message : 'WhatsApp delivery failed'
+        method: 'sms',
+        error: error instanceof Error ? error.message : 'SMS delivery failed'
       };
     }
   }

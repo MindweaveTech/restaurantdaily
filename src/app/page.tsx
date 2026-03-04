@@ -37,7 +37,7 @@ export default function Home() {
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
             <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4 px-2 sm:px-0">
-              ✓ No credit card required • ✓ WhatsApp login in 30 seconds
+              ✓ No credit card required • ✓ SMS login in 30 seconds
             </p>
           </div>
         </div>
@@ -105,11 +105,11 @@ export default function Home() {
                 <Users className="h-7 w-7 text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Team Management</h3>
-              <p className="text-gray-600 mb-4">WhatsApp OTP login means no forgotten passwords. Role-based access keeps your data secure.</p>
+              <p className="text-gray-600 mb-4">SMS OTP login means no forgotten passwords. Role-based access keeps your data secure.</p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                  <span>WhatsApp authentication</span>
+                  <span>SMS authentication</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
@@ -144,8 +144,8 @@ export default function Home() {
               </div>
               <div className="bg-white rounded-lg p-6 shadow-md">
                 <Smartphone className="h-10 w-10 text-orange-600 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign Up with WhatsApp</h3>
-                <p className="text-gray-600">Enter your phone number and receive an instant OTP via WhatsApp. No passwords to remember.</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Sign Up with SMS</h3>
+                <p className="text-gray-600">Enter your phone number and receive an instant OTP via SMS. No passwords to remember.</p>
               </div>
             </div>
 
@@ -193,7 +193,7 @@ export default function Home() {
             <div className="bg-orange-50 rounded-lg p-6">
               <Shield className="h-8 w-8 text-orange-600 mx-auto mb-2" />
               <div className="text-3xl font-bold text-gray-900 mb-1">100%</div>
-              <p className="text-gray-600 text-sm">Secure WhatsApp authentication</p>
+              <p className="text-gray-600 text-sm">Secure SMS authentication</p>
             </div>
 
             <div className="bg-orange-50 rounded-lg p-6">

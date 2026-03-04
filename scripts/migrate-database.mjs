@@ -33,7 +33,7 @@ async function migrateDatabase() {
   try {
     // Test connection first
     console.log('\n🔍 Testing database connection...');
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('_test_')
       .select('*')
       .limit(1);

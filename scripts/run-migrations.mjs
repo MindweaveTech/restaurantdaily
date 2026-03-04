@@ -92,11 +92,11 @@ async function runMigrations() {
 
       console.log('\n✅ Database migration completed successfully!');
 
-    } catch (psqlError) {
+    } catch {
       console.log('⚠️  PostgreSQL client not available, using alternative method...');
 
       // Fallback to Supabase client approach
-      await runMigrationViaSupabase(dbUrl);
+      await runMigrationViaSupabase();
     }
 
     // Verify migration success
@@ -115,7 +115,7 @@ async function runMigrations() {
   }
 }
 
-async function runMigrationViaSupabase(dbUrl) {
+async function runMigrationViaSupabase() {
   console.log('🔄 Running migration via Supabase client...');
 
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -125,7 +125,8 @@ async function runMigrationViaSupabase(dbUrl) {
     throw new Error('Missing Supabase credentials');
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  // Note: Supabase client is created but migrations need manual execution
+  // const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Read and split migration SQL
   const migrationSQL = readFileSync(join(__dirname, 'setup-database.sql'), 'utf8');
@@ -145,7 +146,7 @@ async function runMigrationViaSupabase(dbUrl) {
       try {
         // This is a simplified approach - for production, use proper migration tools
         console.log(`✅ Statement ${i + 1} prepared (manual execution required)`);
-      } catch (error) {
+      } catch {
         console.warn(`⚠️  Statement ${i + 1} may need manual execution`);
       }
     }

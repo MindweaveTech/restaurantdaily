@@ -46,7 +46,7 @@ async function pushSchema() {
       console.log(`⏳ [${i + 1}/${statements.length}] ${preview}...`);
 
       try {
-        const { data, error } = await supabase.rpc('exec_sql', {
+        const { error } = await supabase.rpc('exec_sql', {
           query: statement + ';'
         });
 

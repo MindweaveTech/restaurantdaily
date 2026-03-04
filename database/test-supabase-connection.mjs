@@ -64,7 +64,7 @@ async function testSupabaseConnection() {
 
     // Step 3: Test connection by querying users table
     console.log('\n🔗 Testing connection to users table...');
-    const { data: users, error: userError, count } = await supabase
+    const { error: userError, count } = await supabase
       .from('users')
       .select('*', { count: 'exact', head: true });
 

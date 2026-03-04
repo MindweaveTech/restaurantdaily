@@ -112,9 +112,6 @@ export default function PhoneAuthPage() {
     }
   };
 
-  // Demo login controlled by env variable (only works on localhost anyway)
-  const isDemoEnabled = process.env.NEXT_PUBLIC_DEMO_LOGIN_ENABLED?.toLowerCase() === 'true';
-
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated Background */}

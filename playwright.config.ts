@@ -7,11 +7,19 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'line',
+  timeout: 10000, // Minimal timeout - 10 seconds per test
+  expect: {
+    timeout: 3000, // 3 seconds for assertions
+  },
   use: {
-    baseURL: 'http://localhost:3001',
+    baseURL: 'http://localhost:3002',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    headless: true, // Always run headless
+    actionTimeout: 5000, // 5 seconds for actions
+    navigationTimeout: 10000, // 10 seconds for navigation
   },
+  outputDir: '.screenshots', // Screenshots go here
   projects: [
     {
       name: 'chromium',
@@ -23,8 +31,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3001',
-    reuseExistingServer: !process.env.CI,
+    command: 'PORT=3002 npm run dev',
+    url: 'http://localhost:3002',
+    reuseExistingServer: true,
+    timeout: 30000, // 30 seconds to start server
   },
 });

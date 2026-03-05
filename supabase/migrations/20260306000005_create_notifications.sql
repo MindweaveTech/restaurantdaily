@@ -83,12 +83,12 @@ ON notifications(type, created_at DESC);
 -- Scheduled notifications (for background job)
 CREATE INDEX idx_notifications_scheduled
 ON notifications(scheduled_at)
-WHERE scheduled_at IS NOT NULL AND scheduled_at > NOW();
+WHERE scheduled_at IS NOT NULL;
 
 -- Expired notifications (for cleanup job)
 CREATE INDEX idx_notifications_expired
 ON notifications(expires_at)
-WHERE expires_at IS NOT NULL AND expires_at < NOW();
+WHERE expires_at IS NOT NULL;
 
 -- ================================================================
 -- 3. Enable Row Level Security

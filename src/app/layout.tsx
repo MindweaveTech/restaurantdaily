@@ -14,6 +14,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://restaurant-daily.mindweave.tech'),
   title: "Restaurant Daily Operations Management | Cash, Payments & Team Tracking",
   description: "Simplify restaurant operations with daily cash reconciliation, payment tracking, and team management. SMS OTP login. Mobile-first. Built for Indian restaurants.",
   keywords: ["restaurant management software", "daily operations", "cash tracking", "payment management", "restaurant POS", "team management", "SMS OTP"],

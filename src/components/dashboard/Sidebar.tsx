@@ -107,7 +107,8 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
             )}
             <ul className="space-y-1">
               {group.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                // Use exact match to avoid multiple items being highlighted
+                const isActive = pathname === item.href;
                 const Icon = item.icon;
 
                 return (

@@ -17,17 +17,50 @@ import { DashboardShell, StatCard, AttendanceOverview } from '@/components/dashb
 import StaffInvitationModal from '@/components/admin/StaffInvitationModal';
 import { Button } from '@/components/ui/button';
 
+interface DashboardStats {
+  totalStaff: number;
+  newThisMonth: number;
+  presentToday: number;
+  attendanceRate: number;
+  totalHoursToday: number;
+  overtimePay: number;
+}
+
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [showWelcomeCard, setShowWelcomeCard] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStaff: 0,
+    newThisMonth: 0,
+    presentToday: 0,
+    attendanceRate: 0,
+    totalHoursToday: 0,
+    overtimePay: 0,
+  });
 
   useEffect(() => {
     const welcomeDismissed = localStorage.getItem('welcomeCardDismissed');
     if (welcomeDismissed === 'true') {
       setShowWelcomeCard(false);
     }
-    setLoading(false);
+
+    // Fetch dashboard stats
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/dashboard/stats');
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.stats);
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
   }, []);
 
   const dismissWelcomeCard = () => {
@@ -97,29 +130,28 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Team Members"
-          value="8"
-          subtitle="2 new this month"
+          value={String(stats.totalStaff)}
+          subtitle={stats.newThisMonth > 0 ? `${stats.newThisMonth} new this month` : 'No new members'}
           icon={Users}
-          trend={{ value: 12, label: 'vs last month' }}
           variant="primary"
         />
         <StatCard
           title="Present Today"
-          value="6"
-          subtitle="75% attendance"
+          value={String(stats.presentToday)}
+          subtitle={`${stats.attendanceRate}% attendance`}
           icon={Clock}
           variant="success"
         />
         <StatCard
           title="Total Hours"
-          value="48.5"
+          value={String(stats.totalHoursToday)}
           subtitle="Today's combined"
           icon={TrendingUp}
           variant="default"
         />
         <StatCard
           title="Overtime"
-          value="₹2,340"
+          value={`₹${stats.overtimePay.toLocaleString('en-IN')}`}
           subtitle="This month"
           icon={DollarSign}
           variant="warning"

@@ -56,3 +56,6 @@ logs/
 .screenshots/
 .playwright-mcp/
 *.png
+
+# Attendance sheets (private data)
+data/.sheets/

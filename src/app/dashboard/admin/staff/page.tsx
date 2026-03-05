@@ -1,27 +1,93 @@
 'use client';
 
-import { Users, UserPlus, Search, MoreVertical, Phone, Mail } from 'lucide-react';
+import { Users, UserPlus, Search, MoreVertical, Phone, Mail, Loader2 } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface StaffMember {
+  id: string;
+  name: string | null;
+  phone: string;
+  email: string | null;
+  role: string;
+  status: string;
+  created_at: string;
+  settings?: {
+    monthly_salary?: number;
+    job_title?: string;
+    shift_hours?: number;
+  };
+}
 
 export default function StaffManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const staffMembers = [
-    { id: 1, name: 'Rahul Kumar', role: 'Chef', phone: '+91 98765 43210', email: 'rahul@example.com', status: 'active', joinDate: '2024-01-15' },
-    { id: 2, name: 'Priya Sharma', role: 'Server', phone: '+91 98765 43211', email: 'priya@example.com', status: 'active', joinDate: '2024-03-20' },
-    { id: 3, name: 'Amit Singh', role: 'Server', phone: '+91 98765 43212', email: 'amit@example.com', status: 'active', joinDate: '2024-06-10' },
-    { id: 4, name: 'Neha Patel', role: 'Cashier', phone: '+91 98765 43213', email: 'neha@example.com', status: 'active', joinDate: '2024-02-28' },
-    { id: 5, name: 'Vikram Reddy', role: 'Chef', phone: '+91 98765 43214', email: 'vikram@example.com', status: 'active', joinDate: '2023-11-05' },
-    { id: 6, name: 'Anjali Gupta', role: 'Server', phone: '+91 98765 43215', email: 'anjali@example.com', status: 'inactive', joinDate: '2024-08-15' },
-    { id: 7, name: 'Ravi Verma', role: 'Cleaner', phone: '+91 98765 43216', email: 'ravi@example.com', status: 'active', joinDate: '2024-04-01' },
-    { id: 8, name: 'Sunita Devi', role: 'Helper', phone: '+91 98765 43217', email: 'sunita@example.com', status: 'active', joinDate: '2024-05-20' },
-  ];
+  // Fetch staff from API
+  useEffect(() => {
+    async function fetchStaff() {
+      try {
+        const response = await fetch('/api/staff/list');
+        const data = await response.json();
+
+        if (data.success) {
+          setStaffMembers(data.staff);
+        } else {
+          setError(data.error || 'Failed to fetch staff');
+        }
+      } catch (err) {
+        setError('Network error');
+        console.error('Error fetching staff:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStaff();
+  }, []);
 
   const filteredStaff = staffMembers.filter(staff =>
-    staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    staff.role.toLowerCase().includes(searchQuery.toLowerCase())
+    (staff.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+    (staff.settings?.job_title?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatPhone = (phone: string) => {
+    if (phone.startsWith('+91')) {
+      const digits = phone.replace(/\D/g, '').slice(2);
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    }
+    return phone;
+  };
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardShell>
+        <div className="glass-card p-8 text-center">
+          <p className="text-red-400">{error}</p>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -59,45 +125,56 @@ export default function StaffManagementPage() {
             </h2>
           </div>
           <div className="divide-y divide-white/5">
-            {filteredStaff.map((staff) => (
-              <div key={staff.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-primary font-semibold text-lg">{staff.name.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-white">{staff.name}</p>
-                      {staff.status === 'active' ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                          Active
+            {filteredStaff.length === 0 ? (
+              <div className="p-8 text-center text-white/50">
+                No staff members found
+              </div>
+            ) : (
+              filteredStaff.map((staff) => (
+                <div key={staff.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-primary font-semibold text-lg">
+                        {staff.name?.charAt(0) || '?'}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-white">{staff.name || 'Unnamed'}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-xs border ${
+                          staff.status === 'active'
+                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                            : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                        }`}>
+                          {staff.status}
                         </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/30">
-                          Inactive
+                      </div>
+                      <p className="text-sm text-white/50">
+                        {staff.settings?.job_title || staff.role}
+                        {staff.settings?.monthly_salary && ` • ${formatCurrency(staff.settings.monthly_salary)}/month`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="hidden md:flex flex-col items-end text-sm">
+                      <span className="text-white/60 flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {formatPhone(staff.phone)}
+                      </span>
+                      {staff.email && (
+                        <span className="text-white/40 flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {staff.email}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-white/50">{staff.role}</p>
+                    <button className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors">
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="hidden md:flex flex-col items-end text-sm">
-                    <span className="text-white/60 flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {staff.phone}
-                    </span>
-                    <span className="text-white/40 flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {staff.email}
-                    </span>
-                  </div>
-                  <button className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors">
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -1,11 +1,47 @@
 'use client';
 
-import { Building2, Bell, Shield, Palette, Save, Camera } from 'lucide-react';
+import { Building2, Bell, Shield, Palette, Save, Camera, Loader2 } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboard';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+interface Restaurant {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  gst_number: string | null;
+  fssai_number: string | null;
+  kyc_verified: boolean;
+  logo_url: string | null;
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('restaurant');
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchRestaurant() {
+      try {
+        const response = await fetch('/api/restaurant/info');
+        const data = await response.json();
+
+        if (data.success) {
+          setRestaurant(data.restaurant);
+        } else {
+          setError(data.error || 'Failed to fetch restaurant');
+        }
+      } catch (err) {
+        setError('Network error');
+        console.error('Error fetching restaurant:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRestaurant();
+  }, []);
 
   const tabs = [
     { id: 'restaurant', label: 'Restaurant', icon: Building2 },
@@ -13,6 +49,24 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
+
+  const formatPhone = (phone: string) => {
+    if (phone.startsWith('+91')) {
+      const digits = phone.replace(/\D/g, '').slice(2);
+      return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    }
+    return phone;
+  };
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -56,72 +110,93 @@ export default function SettingsPage() {
                   Restaurant Information
                 </h2>
 
-                {/* Logo */}
-                <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 rounded-xl bg-primary/20 flex items-center justify-center">
-                    <span className="text-3xl font-bold text-primary">BS</span>
-                  </div>
-                  <div>
-                    <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 flex items-center gap-2">
-                      <Camera className="h-4 w-4" />
-                      Change Logo
-                    </button>
-                    <p className="text-sm text-white/40 mt-2">PNG, JPG up to 2MB</p>
-                  </div>
-                </div>
+                {error ? (
+                  <p className="text-red-400">{error}</p>
+                ) : restaurant ? (
+                  <>
+                    {/* Logo */}
+                    <div className="flex items-center gap-6">
+                      <div className="w-24 h-24 rounded-xl bg-primary/20 flex items-center justify-center">
+                        {restaurant.logo_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={restaurant.logo_url} alt="Logo" className="w-full h-full rounded-xl object-cover" />
+                        ) : (
+                          <span className="text-3xl font-bold text-primary">
+                            {restaurant.name.slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 flex items-center gap-2">
+                          <Camera className="h-4 w-4" />
+                          Change Logo
+                        </button>
+                        <p className="text-sm text-white/40 mt-2">PNG, JPG up to 2MB</p>
+                      </div>
+                    </div>
 
-                {/* Form */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">Restaurant Name</label>
-                    <input
-                      type="text"
-                      defaultValue="Burger Singh"
-                      className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">Phone Number</label>
-                    <input
-                      type="tel"
-                      defaultValue="+91 8826175074"
-                      className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-white/60 mb-2">Address</label>
-                    <textarea
-                      defaultValue="GG-15, GC Grand Street, Windsor Rd, Vaibhav Khand, Indirapuram, Ghaziabad, UP 201301"
-                      rows={3}
-                      className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">GST Number</label>
-                    <input
-                      type="text"
-                      defaultValue="09BENPR6281N1ZG"
-                      className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary font-mono"
-                      readOnly
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">FSSAI License</label>
-                    <input
-                      type="text"
-                      defaultValue="12720052000784"
-                      className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary font-mono"
-                      readOnly
-                    />
-                  </div>
-                </div>
+                    {/* Form */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Restaurant Name</label>
+                        <input
+                          type="text"
+                          defaultValue={restaurant.name}
+                          className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Phone Number</label>
+                        <input
+                          type="tel"
+                          defaultValue={formatPhone(restaurant.phone)}
+                          className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm text-white/60 mb-2">Address</label>
+                        <textarea
+                          defaultValue={restaurant.address}
+                          rows={3}
+                          className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">GST Number</label>
+                        <input
+                          type="text"
+                          defaultValue={restaurant.gst_number || ''}
+                          className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary font-mono"
+                          readOnly={restaurant.kyc_verified}
+                        />
+                        {restaurant.kyc_verified && (
+                          <p className="text-xs text-green-400 mt-1">✓ Verified</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">FSSAI License</label>
+                        <input
+                          type="text"
+                          defaultValue={restaurant.fssai_number || ''}
+                          className="w-full bg-white/5 text-white rounded-lg px-4 py-2.5 border border-white/10 focus:outline-none focus:border-primary font-mono"
+                          readOnly={restaurant.kyc_verified}
+                        />
+                        {restaurant.fssai_number && (
+                          <p className="text-xs text-white/40 mt-1">14-digit FSSAI License</p>
+                        )}
+                      </div>
+                    </div>
 
-                <div className="flex justify-end pt-4 border-t border-white/10">
-                  <button className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </button>
-                </div>
+                    <div className="flex justify-end pt-4 border-t border-white/10">
+                      <button className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground flex items-center gap-2">
+                        <Save className="h-4 w-4" />
+                        Save Changes
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-white/50">No restaurant data available</p>
+                )}
               </div>
             )}
 

@@ -67,6 +67,12 @@ const navigation: NavGroup[] = [
       { title: 'Settings', href: '/dashboard/admin/settings', icon: Settings },
     ],
   },
+  {
+    label: 'Account',
+    items: [
+      { title: 'Profile', href: '/dashboard/admin/profile', icon: Users },
+    ],
+  },
 ];
 
 export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {

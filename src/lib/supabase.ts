@@ -125,3 +125,129 @@ export interface StaffInvitation {
   accepted_at?: string;
   created_at: string;
 }
+
+// Cash Session types
+export type CashSessionStatus = 'active' | 'closed' | 'void';
+
+export interface CashSession {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  start_time: string;
+  end_time?: string;
+  opening_balance: number;
+  closing_balance?: number;
+  total_sales: number;
+  total_refunds: number;
+  cash_difference?: number;
+  cash_payments: number;
+  card_payments: number;
+  upi_payments: number;
+  other_payments: number;
+  status: CashSessionStatus;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Petty Voucher types
+export type VoucherStatus = 'pending' | 'approved' | 'rejected' | 'paid' | 'void';
+export type VoucherCategory =
+  | 'supplies' | 'cleaning' | 'repairs' | 'transport' | 'utilities'
+  | 'food_ingredients' | 'packaging' | 'marketing' | 'staff_welfare'
+  | 'office_supplies' | 'miscellaneous' | 'other';
+
+export interface PettyVoucher {
+  id: string;
+  user_id: string;
+  restaurant_id: string;
+  voucher_number?: string;
+  amount: number;
+  description: string;
+  category: VoucherCategory;
+  date: string;
+  vendor_name?: string;
+  vendor_contact?: string;
+  status: VoucherStatus;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  receipt_url?: string;
+  receipt_urls?: string[];
+  paid: boolean;
+  paid_at?: string;
+  paid_by?: string;
+  payment_method?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Electricity Payment types
+export type PaymentStatus = 'pending' | 'paid' | 'overdue' | 'partial' | 'disputed' | 'void';
+
+export interface ElectricityPayment {
+  id: string;
+  restaurant_id: string;
+  created_by?: string;
+  bill_number?: string;
+  bill_date: string;
+  due_date: string;
+  billing_period_start?: string;
+  billing_period_end?: string;
+  amount: number;
+  units_consumed?: number;
+  rate_per_unit?: number;
+  fixed_charges: number;
+  taxes: number;
+  late_fee: number;
+  total_amount?: number;
+  vendor_name: string;
+  vendor_account_number?: string;
+  meter_number?: string;
+  status: PaymentStatus;
+  paid_date?: string;
+  paid_amount?: number;
+  paid_by?: string;
+  payment_method?: string;
+  payment_reference?: string;
+  bill_url?: string;
+  receipt_url?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Notification types
+export type NotificationType =
+  | 'info' | 'success' | 'warning' | 'error'
+  | 'voucher_pending' | 'voucher_approved' | 'voucher_rejected'
+  | 'session_reminder' | 'session_closed'
+  | 'payment_due' | 'payment_overdue' | 'payment_received'
+  | 'attendance_checkin' | 'attendance_checkout'
+  | 'staff_invited' | 'staff_joined'
+  | 'report_ready' | 'system_update'
+  | 'other';
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  restaurant_id?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  icon?: string;
+  read: boolean;
+  read_at?: string;
+  archived: boolean;
+  action_url?: string;
+  action_label?: string;
+  action_data?: Record<string, unknown>;
+  entity_type?: string;
+  entity_id?: string;
+  priority: NotificationPriority;
+  scheduled_at?: string;
+  expires_at?: string;
+  created_at: string;
+}

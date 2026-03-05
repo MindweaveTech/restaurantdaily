@@ -1,4 +1,21 @@
-import { getSupabaseAdmin, supabaseAdmin, Restaurant, User, StaffInvitation, SystemAdmin, BusinessInvitation } from './supabase';
+import {
+  getSupabaseAdmin,
+  supabaseAdmin,
+  Restaurant,
+  User,
+  StaffInvitation,
+  SystemAdmin,
+  BusinessInvitation,
+  CashSession,
+  PettyVoucher,
+  ElectricityPayment,
+  Notification,
+  VoucherCategory,
+  VoucherStatus,
+  PaymentStatus,
+  NotificationType,
+  NotificationPriority,
+} from './supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { UserRole } from '@/types';
 
@@ -904,6 +921,531 @@ export class AttendanceService {
   }
 }
 
+// Cash Session operations
+export class CashSessionService {
+
+  async createSession(data: {
+    userId: string;
+    restaurantId: string;
+    openingBalance: number;
+    notes?: string;
+  }): Promise<CashSession> {
+    // Check for existing active session
+    const activeSession = await this.getActiveSession(data.userId, data.restaurantId);
+    if (activeSession) {
+      throw new Error('User already has an active cash session. Please close it first.');
+    }
+
+    const sessionData = {
+      user_id: data.userId,
+      restaurant_id: data.restaurantId,
+      opening_balance: data.openingBalance,
+      notes: data.notes || null,
+      status: 'active' as const,
+    };
+
+    const client = await getClient();
+    const { data: session, error } = await client
+      .from('cash_sessions')
+      .insert([sessionData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error creating cash session:', error);
+      throw new Error(`Failed to create cash session: ${error.message}`);
+    }
+
+    return session;
+  }
+
+  async getActiveSession(userId: string, restaurantId: string): Promise<CashSession | null> {
+    const client = await getClient();
+    const { data, error } = await client
+      .from('cash_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'active')
+      .order('start_time', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      console.error('Database error fetching active session:', error);
+      throw new Error(`Failed to fetch active session: ${error.message}`);
+    }
+    return data;
+  }
+
+  async closeSession(data: {
+    sessionId: string;
+    userId: string;
+    closingBalance: number;
+    totalSales?: number;
+    totalRefunds?: number;
+    cashPayments?: number;
+    cardPayments?: number;
+    upiPayments?: number;
+    otherPayments?: number;
+    notes?: string;
+  }): Promise<CashSession> {
+    const client = await getClient();
+
+    const updateData: Record<string, unknown> = {
+      closing_balance: data.closingBalance,
+      status: 'closed',
+      end_time: new Date().toISOString(),
+    };
+
+    if (data.totalSales !== undefined) updateData.total_sales = data.totalSales;
+    if (data.totalRefunds !== undefined) updateData.total_refunds = data.totalRefunds;
+    if (data.cashPayments !== undefined) updateData.cash_payments = data.cashPayments;
+    if (data.cardPayments !== undefined) updateData.card_payments = data.cardPayments;
+    if (data.upiPayments !== undefined) updateData.upi_payments = data.upiPayments;
+    if (data.otherPayments !== undefined) updateData.other_payments = data.otherPayments;
+    if (data.notes) updateData.notes = data.notes;
+
+    const { data: session, error } = await client
+      .from('cash_sessions')
+      .update(updateData)
+      .eq('id', data.sessionId)
+      .eq('user_id', data.userId)
+      .eq('status', 'active')
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('No active session found or already closed');
+      }
+      console.error('Database error closing session:', error);
+      throw new Error(`Failed to close session: ${error.message}`);
+    }
+
+    return session;
+  }
+
+  async getSessionById(sessionId: string): Promise<CashSession | null> {
+    const client = await getClient();
+    const { data, error } = await client
+      .from('cash_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw new Error(`Failed to fetch session: ${error.message}`);
+    }
+    return data;
+  }
+
+  async getRestaurantSessions(restaurantId: string, options?: {
+    status?: 'active' | 'closed';
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<CashSession[]> {
+    const client = await getClient();
+    let query = client
+      .from('cash_sessions')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('start_time', { ascending: false });
+
+    if (options?.status) query = query.eq('status', options.status);
+    if (options?.startDate) query = query.gte('start_time', options.startDate);
+    if (options?.endDate) query = query.lte('start_time', options.endDate);
+    if (options?.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to fetch sessions: ${error.message}`);
+    return data || [];
+  }
+}
+
+// Petty Voucher operations
+export class PettyVoucherService {
+
+  async createVoucher(data: {
+    userId: string;
+    restaurantId: string;
+    amount: number;
+    description: string;
+    category: VoucherCategory;
+    date?: string;
+    vendorName?: string;
+    vendorContact?: string;
+    receiptUrl?: string;
+  }): Promise<PettyVoucher> {
+    const voucherData = {
+      user_id: data.userId,
+      restaurant_id: data.restaurantId,
+      amount: data.amount,
+      description: data.description,
+      category: data.category,
+      date: data.date || new Date().toISOString().split('T')[0],
+      vendor_name: data.vendorName || null,
+      vendor_contact: data.vendorContact || null,
+      receipt_url: data.receiptUrl || null,
+      status: 'pending' as const,
+    };
+
+    const client = await getClient();
+    const { data: voucher, error } = await client
+      .from('petty_vouchers')
+      .insert([voucherData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error creating voucher:', error);
+      throw new Error(`Failed to create voucher: ${error.message}`);
+    }
+
+    return voucher;
+  }
+
+  async getVoucherById(voucherId: string): Promise<PettyVoucher | null> {
+    const client = await getClient();
+    const { data, error } = await client
+      .from('petty_vouchers')
+      .select('*')
+      .eq('id', voucherId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw new Error(`Failed to fetch voucher: ${error.message}`);
+    }
+    return data;
+  }
+
+  async updateVoucherStatus(data: {
+    voucherId: string;
+    status: VoucherStatus;
+    approvedBy?: string;
+    rejectionReason?: string;
+  }): Promise<PettyVoucher> {
+    const client = await getClient();
+
+    const updateData: Record<string, unknown> = {
+      status: data.status,
+    };
+
+    if (data.status === 'approved' && data.approvedBy) {
+      updateData.approved_by = data.approvedBy;
+      updateData.approved_at = new Date().toISOString();
+    }
+
+    if (data.status === 'rejected' && data.rejectionReason) {
+      updateData.rejection_reason = data.rejectionReason;
+    }
+
+    const { data: voucher, error } = await client
+      .from('petty_vouchers')
+      .update(updateData)
+      .eq('id', data.voucherId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update voucher: ${error.message}`);
+    return voucher;
+  }
+
+  async getRestaurantVouchers(restaurantId: string, options?: {
+    status?: VoucherStatus;
+    category?: VoucherCategory;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: PettyVoucher[]; total: number }> {
+    const client = await getClient();
+    let query = client
+      .from('petty_vouchers')
+      .select('*', { count: 'exact' })
+      .eq('restaurant_id', restaurantId)
+      .order('date', { ascending: false });
+
+    if (options?.status) query = query.eq('status', options.status);
+    if (options?.category) query = query.eq('category', options.category);
+    if (options?.startDate) query = query.gte('date', options.startDate);
+    if (options?.endDate) query = query.lte('date', options.endDate);
+    if (options?.limit) query = query.limit(options.limit);
+    if (options?.offset) query = query.range(options.offset, options.offset + (options.limit || 50) - 1);
+
+    const { data, error, count } = await query;
+    if (error) throw new Error(`Failed to fetch vouchers: ${error.message}`);
+    return { data: data || [], total: count || 0 };
+  }
+
+  async getUserVouchers(userId: string, options?: {
+    status?: VoucherStatus;
+    limit?: number;
+  }): Promise<PettyVoucher[]> {
+    const client = await getClient();
+    let query = client
+      .from('petty_vouchers')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+
+    if (options?.status) query = query.eq('status', options.status);
+    if (options?.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to fetch user vouchers: ${error.message}`);
+    return data || [];
+  }
+
+  async getPendingCount(restaurantId: string): Promise<number> {
+    const client = await getClient();
+    const { count, error } = await client
+      .from('petty_vouchers')
+      .select('*', { count: 'exact', head: true })
+      .eq('restaurant_id', restaurantId)
+      .eq('status', 'pending');
+
+    if (error) throw new Error(`Failed to count pending vouchers: ${error.message}`);
+    return count || 0;
+  }
+}
+
+// Electricity Payment operations
+export class ElectricityPaymentService {
+
+  async createPayment(data: {
+    restaurantId: string;
+    createdBy: string;
+    amount: number;
+    billDate: string;
+    dueDate: string;
+    vendorName: string;
+    billNumber?: string;
+    unitsConsumed?: number;
+    ratePerUnit?: number;
+    fixedCharges?: number;
+    taxes?: number;
+    vendorAccountNumber?: string;
+    meterNumber?: string;
+    billUrl?: string;
+    notes?: string;
+  }): Promise<ElectricityPayment> {
+    const paymentData = {
+      restaurant_id: data.restaurantId,
+      created_by: data.createdBy,
+      amount: data.amount,
+      bill_date: data.billDate,
+      due_date: data.dueDate,
+      vendor_name: data.vendorName,
+      bill_number: data.billNumber || null,
+      units_consumed: data.unitsConsumed || null,
+      rate_per_unit: data.ratePerUnit || null,
+      fixed_charges: data.fixedCharges || 0,
+      taxes: data.taxes || 0,
+      vendor_account_number: data.vendorAccountNumber || null,
+      meter_number: data.meterNumber || null,
+      bill_url: data.billUrl || null,
+      notes: data.notes || null,
+      status: 'pending' as const,
+    };
+
+    const client = await getClient();
+    const { data: payment, error } = await client
+      .from('electricity_payments')
+      .insert([paymentData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database error creating electricity payment:', error);
+      throw new Error(`Failed to create payment: ${error.message}`);
+    }
+
+    return payment;
+  }
+
+  async markAsPaid(data: {
+    paymentId: string;
+    paidBy: string;
+    paidAmount: number;
+    paymentMethod?: string;
+    paymentReference?: string;
+    receiptUrl?: string;
+  }): Promise<ElectricityPayment> {
+    const client = await getClient();
+
+    const updateData = {
+      status: 'paid' as const,
+      paid_date: new Date().toISOString().split('T')[0],
+      paid_by: data.paidBy,
+      paid_amount: data.paidAmount,
+      payment_method: data.paymentMethod || null,
+      payment_reference: data.paymentReference || null,
+      receipt_url: data.receiptUrl || null,
+    };
+
+    const { data: payment, error } = await client
+      .from('electricity_payments')
+      .update(updateData)
+      .eq('id', data.paymentId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to mark payment as paid: ${error.message}`);
+    return payment;
+  }
+
+  async getRestaurantPayments(restaurantId: string, options?: {
+    status?: PaymentStatus;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): Promise<ElectricityPayment[]> {
+    const client = await getClient();
+    let query = client
+      .from('electricity_payments')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('due_date', { ascending: false });
+
+    if (options?.status) query = query.eq('status', options.status);
+    if (options?.startDate) query = query.gte('bill_date', options.startDate);
+    if (options?.endDate) query = query.lte('bill_date', options.endDate);
+    if (options?.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to fetch payments: ${error.message}`);
+    return data || [];
+  }
+
+  async getPendingPayments(restaurantId: string): Promise<ElectricityPayment[]> {
+    const client = await getClient();
+    const { data, error } = await client
+      .from('electricity_payments')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .in('status', ['pending', 'overdue'])
+      .order('due_date', { ascending: true });
+
+    if (error) throw new Error(`Failed to fetch pending payments: ${error.message}`);
+    return data || [];
+  }
+}
+
+// Notification operations
+export class NotificationService {
+
+  async createNotification(data: {
+    userId: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    restaurantId?: string;
+    actionUrl?: string;
+    actionLabel?: string;
+    entityType?: string;
+    entityId?: string;
+    priority?: NotificationPriority;
+    icon?: string;
+  }): Promise<Notification> {
+    const notificationData = {
+      user_id: data.userId,
+      restaurant_id: data.restaurantId || null,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      action_url: data.actionUrl || null,
+      action_label: data.actionLabel || null,
+      entity_type: data.entityType || null,
+      entity_id: data.entityId || null,
+      priority: data.priority || 'normal',
+      icon: data.icon || null,
+    };
+
+    const client = await getClient();
+    const { data: notification, error } = await client
+      .from('notifications')
+      .insert([notificationData])
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to create notification: ${error.message}`);
+    return notification;
+  }
+
+  async getUserNotifications(userId: string, options?: {
+    unreadOnly?: boolean;
+    limit?: number;
+  }): Promise<Notification[]> {
+    const client = await getClient();
+    let query = client
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('archived', false)
+      .order('created_at', { ascending: false });
+
+    if (options?.unreadOnly) query = query.eq('read', false);
+    if (options?.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to fetch notifications: ${error.message}`);
+    return data || [];
+  }
+
+  async markAsRead(notificationId: string, userId: string): Promise<void> {
+    const client = await getClient();
+    const { error } = await client
+      .from('notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error(`Failed to mark notification as read: ${error.message}`);
+  }
+
+  async markAllAsRead(userId: string): Promise<number> {
+    const client = await getClient();
+    const { data, error } = await client
+      .from('notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .eq('read', false)
+      .select();
+
+    if (error) throw new Error(`Failed to mark notifications as read: ${error.message}`);
+    return data?.length || 0;
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    const client = await getClient();
+    const { count, error } = await client
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('read', false)
+      .eq('archived', false);
+
+    if (error) throw new Error(`Failed to count notifications: ${error.message}`);
+    return count || 0;
+  }
+
+  async archiveNotification(notificationId: string, userId: string): Promise<void> {
+    const client = await getClient();
+    const { error } = await client
+      .from('notifications')
+      .update({ archived: true })
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) throw new Error(`Failed to archive notification: ${error.message}`);
+  }
+}
+
 // Singleton instances
 export const systemAdminService = new SystemAdminService();
 export const businessInvitationService = new BusinessInvitationService();
@@ -911,3 +1453,7 @@ export const restaurantService = new RestaurantService();
 export const userService = new UserService();
 export const staffInvitationService = new StaffInvitationService();
 export const attendanceService = new AttendanceService();
+export const cashSessionService = new CashSessionService();
+export const pettyVoucherService = new PettyVoucherService();
+export const electricityPaymentService = new ElectricityPaymentService();
+export const notificationService = new NotificationService();

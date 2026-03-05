@@ -171,40 +171,42 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'accepted':
-        return 'text-green-600 bg-green-100';
+        return 'text-green-500 bg-green-500/10';
       case 'cancelled':
       case 'expired':
-        return 'text-red-600 bg-red-100';
+        return 'text-red-500 bg-red-500/10';
       default:
-        return 'text-yellow-600 bg-yellow-100';
+        return 'text-yellow-500 bg-yellow-500/10';
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center">
-            <Users className="h-6 w-6 text-blue-600 mr-3" />
-            <h2 className="text-xl font-semibold text-gray-900">Staff Management</h2>
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground ml-3">Staff Management</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
-            <X className="h-5 w-5 text-gray-600" />
+            <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-border">
           <button
             onClick={() => handleTabChange('invite')}
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === 'invite'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'text-primary border-b-2 border-primary bg-primary/5'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Plus className="h-4 w-4 inline mr-2" />
@@ -214,8 +216,8 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
             onClick={() => handleTabChange('pending')}
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === 'pending'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'text-primary border-b-2 border-primary bg-primary/5'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Clock className="h-4 w-4 inline mr-2" />
@@ -228,7 +230,7 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
           {/* Message */}
           {message && (
             <div className={`mb-4 p-4 rounded-lg ${
-              message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              message.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
             }`}>
               {message.text}
             </div>
@@ -236,16 +238,16 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
 
           {activeTab === 'invite' && (
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-foreground mb-4">
                 Invite Team Member
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 Send an SMS invitation to add a new team member to your restaurant.
               </p>
 
               <form onSubmit={handleInvite} className="space-y-4">
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-2">
                     Phone Number
                   </label>
                   <input
@@ -254,19 +256,19 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     placeholder="+1234567890"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-foreground placeholder:text-muted-foreground"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Include country code (e.g., +1 for US, +91 for India)
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Role
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <select className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-foreground">
                     <option value="staff">Staff Member</option>
                   </select>
                 </div>
@@ -274,11 +276,11 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
                 <button
                   type="submit"
                   disabled={isSubmitting || !phoneNumber.trim()}
-                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
                       Sending Invitation...
                     </>
                   ) : (
@@ -294,20 +296,22 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
 
           {activeTab === 'pending' && (
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-foreground mb-4">
                 Pending Invitations
               </h3>
 
               {isLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading invitations...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading invitations...</p>
                 </div>
               ) : invitations.length === 0 ? (
                 <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">No pending invitations</p>
-                  <p className="text-sm text-gray-500">
+                  <div className="p-3 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                    <Users className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-foreground mb-2">No pending invitations</p>
+                  <p className="text-sm text-muted-foreground">
                     Send your first invitation using the &quot;Invite New Staff&quot; tab.
                   </p>
                 </div>
@@ -316,18 +320,18 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
                   {invitations.map((invitation) => (
                     <div
                       key={invitation.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/30"
                     >
                       <div className="flex items-center">
                         {getStatusIcon(invitation.status)}
                         <div className="ml-3">
-                          <p className="font-medium text-gray-900">{invitation.phone}</p>
-                          <p className="text-sm text-gray-600">
+                          <p className="font-medium text-foreground">{invitation.phone}</p>
+                          <p className="text-sm text-muted-foreground">
                             Role: {invitation.role} •
                             Created: {new Date(invitation.created_at).toLocaleDateString()}
                           </p>
                           {invitation.status === 'pending' && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               Expires: {new Date(invitation.expires_at).toLocaleDateString()}
                             </p>
                           )}
@@ -342,7 +346,7 @@ export default function StaffInvitationModal({ isOpen, onClose }: StaffInvitatio
                         {invitation.status === 'pending' && (
                           <button
                             onClick={() => handleCancelInvitation(invitation.id)}
-                            className="text-red-600 hover:text-red-700 text-sm font-medium"
+                            className="text-red-500 hover:text-red-400 text-sm font-medium transition-colors"
                           >
                             Cancel
                           </button>

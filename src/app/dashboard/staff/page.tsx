@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ChefHat, Clock, FileText, TrendingUp, User, Building2, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { ChefHat, Clock, FileText, TrendingUp, User, Building2, CheckCircle, HelpCircle } from 'lucide-react';
 import { CheckInCard } from '@/components/attendance';
 
 interface StaffInfo {
@@ -12,9 +13,61 @@ interface StaffInfo {
   status?: string;
 }
 
+interface StaffStats {
+  todayHours: number;
+  activeSessions: number;
+  myVouchers: number;
+}
+
 export default function StaffDashboard() {
+  const router = useRouter();
   const [userInfo, setUserInfo] = useState<StaffInfo | null>(null);
+  const [stats, setStats] = useState<StaffStats>({ todayHours: 0, activeSessions: 0, myVouchers: 0 });
   const [loading, setLoading] = useState(true);
+  const [showCashSessionModal, setShowCashSessionModal] = useState(false);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showRestaurantInfoModal, setShowRestaurantInfoModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  const fetchStats = useCallback(async (token: string) => {
+    try {
+      // Fetch attendance status to calculate today's hours
+      const attendanceRes = await fetch('/api/attendance/status', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (attendanceRes.ok) {
+        const attendanceData = await attendanceRes.json();
+        if (attendanceData.attendance?.check_in_time) {
+          const checkIn = new Date(attendanceData.attendance.check_in_time);
+          const now = new Date();
+          const hoursWorked = (now.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+          setStats(prev => ({ ...prev, todayHours: Math.round(hoursWorked * 10) / 10 }));
+        }
+      }
+
+      // Fetch active cash sessions
+      const sessionsRes = await fetch('/api/cash-sessions?status=active&limit=10', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (sessionsRes.ok) {
+        const sessionsData = await sessionsRes.json();
+        setStats(prev => ({ ...prev, activeSessions: sessionsData.sessions?.length || 0 }));
+      }
+
+      // Fetch user's vouchers
+      const vouchersRes = await fetch('/api/vouchers?limit=100', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (vouchersRes.ok) {
+        const vouchersData = await vouchersRes.json();
+        setStats(prev => ({ ...prev, myVouchers: vouchersData.total || 0 }));
+      }
+    } catch (error) {
+      // Stats are non-critical, silently fail
+      void error;
+    }
+  }, []);
 
   useEffect(() => {
     // Get user info from JWT token
@@ -23,12 +76,22 @@ export default function StaffDashboard() {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         setUserInfo(payload);
-      } catch (error) {
-        console.error('Error parsing token:', error);
+        fetchStats(token);
+      } catch {
+        // Token parsing failed
       }
     }
     setLoading(false);
-  }, []);
+  }, [fetchStats]);
+
+  // Action handlers
+  const handleStartSession = () => setShowCashSessionModal(true);
+  const handleNewVoucher = () => setShowVoucherModal(true);
+  const handleRecordPayment = () => setShowPaymentModal(true);
+  const handleViewProfile = () => router.push('/dashboard/staff/profile');
+  const handleViewRestaurantInfo = () => setShowRestaurantInfoModal(true);
+  const handleGetHelp = () => setShowHelpModal(true);
+  const handleStartWorking = () => setShowCashSessionModal(true);
 
   if (loading) {
     return (
@@ -97,7 +160,7 @@ export default function StaffDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Today&apos;s Hours</p>
-                <p className="text-2xl font-semibold text-gray-900">0</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.todayHours}</p>
               </div>
             </div>
           </div>
@@ -109,7 +172,7 @@ export default function StaffDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Active Sessions</p>
-                <p className="text-2xl font-semibold text-gray-900">0</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.activeSessions}</p>
               </div>
             </div>
           </div>
@@ -121,7 +184,7 @@ export default function StaffDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">My Vouchers</p>
-                <p className="text-2xl font-semibold text-gray-900">0</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.myVouchers}</p>
               </div>
             </div>
           </div>
@@ -140,7 +203,10 @@ export default function StaffDashboard() {
             <p className="text-gray-600 mb-4 text-sm">
               Start or end your cash handling session with opening and closing balance tracking.
             </p>
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            <button
+              onClick={handleStartSession}
+              className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
               <Clock className="h-4 w-4 mr-2" />
               Start Session
             </button>
@@ -157,7 +223,10 @@ export default function StaffDashboard() {
             <p className="text-gray-600 mb-4 text-sm">
               Submit expense vouchers for small purchases and get them approved by your admin.
             </p>
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+            <button
+              onClick={handleNewVoucher}
+              className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+            >
               <FileText className="h-4 w-4 mr-2" />
               New Voucher
             </button>
@@ -174,7 +243,10 @@ export default function StaffDashboard() {
             <p className="text-gray-600 mb-4 text-sm">
               Record electricity bill payments and track utility expenses for the restaurant.
             </p>
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+            <button
+              onClick={handleRecordPayment}
+              className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
               <TrendingUp className="h-4 w-4 mr-2" />
               Record Payment
             </button>
@@ -191,7 +263,10 @@ export default function StaffDashboard() {
             <p className="text-gray-600 mb-4 text-sm">
               View and update your profile information and contact details.
             </p>
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={handleViewProfile}
+              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <User className="h-4 w-4 mr-2" />
               View Profile
             </button>
@@ -208,7 +283,10 @@ export default function StaffDashboard() {
             <p className="text-gray-600 mb-4 text-sm">
               View restaurant details, contact information, and operating procedures.
             </p>
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+            <button
+              onClick={handleViewRestaurantInfo}
+              className="w-full flex items-center justify-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
               <Building2 className="h-4 w-4 mr-2" />
               View Info
             </button>
@@ -218,15 +296,18 @@ export default function StaffDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex items-center mb-4">
               <div className="p-2 bg-gray-100 rounded-lg">
-                <ChefHat className="h-6 w-6 text-gray-600" />
+                <HelpCircle className="h-6 w-6 text-gray-600" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 ml-3">Help & Support</h3>
             </div>
             <p className="text-gray-600 mb-4 text-sm">
               Get help with Restaurant Daily features and contact support if needed.
             </p>
-            <button className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-              <ChefHat className="h-4 w-4 mr-2" />
+            <button
+              onClick={handleGetHelp}
+              className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <HelpCircle className="h-4 w-4 mr-2" />
               Get Help
             </button>
           </div>
@@ -245,12 +326,112 @@ export default function StaffDashboard() {
             <p className="text-gray-600 mb-4">
               Welcome to the team! Start by opening a cash session or submitting your first voucher.
             </p>
-            <button className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+            <button
+              onClick={handleStartWorking}
+              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
               Start Working
             </button>
           </div>
         </div>
       </main>
+
+      {/* Cash Session Modal */}
+      {showCashSessionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Start Cash Session</h3>
+            <p className="text-gray-600 mb-4">
+              Cash session functionality coming soon. Track your opening and closing balances.
+            </p>
+            <button
+              onClick={() => setShowCashSessionModal(false)}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Voucher Modal */}
+      {showVoucherModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">New Petty Voucher</h3>
+            <p className="text-gray-600 mb-4">
+              Voucher submission functionality coming soon. Submit expense requests for approval.
+            </p>
+            <button
+              onClick={() => setShowVoucherModal(false)}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Record Payment</h3>
+            <p className="text-gray-600 mb-4">
+              Payment recording functionality coming soon. Track electricity and utility payments.
+            </p>
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Restaurant Info Modal */}
+      {showRestaurantInfoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Restaurant Information</h3>
+            <div className="space-y-3 text-gray-600">
+              <p><strong>Name:</strong> {userInfo?.restaurant_name || 'Restaurant Daily'}</p>
+              <p><strong>Your Role:</strong> {userInfo?.role || 'Staff'}</p>
+              <p><strong>Your Phone:</strong> {userInfo?.phone}</p>
+            </div>
+            <button
+              onClick={() => setShowRestaurantInfoModal(false)}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Help & Support</h3>
+            <div className="space-y-3 text-gray-600">
+              <p>Need help with Restaurant Daily?</p>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Contact your restaurant admin for assistance</li>
+                <li>Check-in/out to track your attendance</li>
+                <li>Submit vouchers for expense reimbursements</li>
+              </ul>
+            </div>
+            <button
+              onClick={() => setShowHelpModal(false)}
+              className="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

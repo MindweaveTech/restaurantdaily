@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Users,
   Clock,
@@ -17,6 +18,7 @@ import StaffInvitationModal from '@/components/admin/StaffInvitationModal';
 import { Button } from '@/components/ui/button';
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [showWelcomeCard, setShowWelcomeCard] = useState(true);
@@ -33,6 +35,12 @@ export default function AdminDashboard() {
     setShowWelcomeCard(false);
     localStorage.setItem('welcomeCardDismissed', 'true');
   };
+
+  // Quick action handlers
+  const handleViewSessions = () => router.push('/dashboard/admin/sessions');
+  const handleManageVouchers = () => router.push('/dashboard/admin/vouchers');
+  const handleViewReports = () => router.push('/dashboard/admin/reports');
+  const handleConfigureSettings = () => router.push('/dashboard/admin/settings');
 
   if (loading) {
     return (
@@ -72,7 +80,7 @@ export default function AdminDashboard() {
               <UserPlus className="h-4 w-4" />
               Invite Staff
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleConfigureSettings}>
               <Settings className="h-4 w-4" />
               Configure Settings
             </Button>
@@ -142,7 +150,10 @@ export default function AdminDashboard() {
                 </div>
               </button>
 
-              <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group">
+              <button
+                onClick={handleViewSessions}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group"
+              >
                 <div className="p-2 rounded-lg bg-green-500/10 text-green-500 group-hover:bg-green-500/20 transition-colors">
                   <Clock className="h-4 w-4" />
                 </div>
@@ -152,7 +163,10 @@ export default function AdminDashboard() {
                 </div>
               </button>
 
-              <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group">
+              <button
+                onClick={handleManageVouchers}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group"
+              >
                 <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20 transition-colors">
                   <FileText className="h-4 w-4" />
                 </div>
@@ -162,7 +176,10 @@ export default function AdminDashboard() {
                 </div>
               </button>
 
-              <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group">
+              <button
+                onClick={handleViewReports}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group"
+              >
                 <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 group-hover:bg-purple-500/20 transition-colors">
                   <TrendingUp className="h-4 w-4" />
                 </div>

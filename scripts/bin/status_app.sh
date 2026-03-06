@@ -3,7 +3,9 @@
 # Restaurant Daily - Check Server Status
 # Usage: ./status_app.sh
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Navigate to actual project root (two levels up from scripts/bin/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PID_FILE="$PROJECT_ROOT/.app.pid"
 
 echo "📊 Restaurant Daily Server Status"
@@ -20,8 +22,8 @@ PID=$(cat "$PID_FILE")
 if kill -0 "$PID" 2>/dev/null; then
     echo "Status:     ✅ RUNNING"
     echo "Process ID: $PID"
-    echo "Port:       3001"
-    echo "URL:        http://localhost:3001"
+    echo "Port:       3002"
+    echo "URL:        http://localhost:3002"
     echo ""
     echo "Memory Usage:"
     ps aux | grep "$PID" | grep -v grep | awk '{print "  " $6 "KB"}'

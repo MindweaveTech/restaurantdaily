@@ -241,6 +241,37 @@ export class OTPService {
     threshold.setHours(threshold.getHours() - config.cleanup_interval_hours);
     return threshold;
   }
+
+  /**
+   * Store a specific OTP code (used for demo/test accounts)
+   * This bypasses the random OTP generation for known test numbers
+   */
+  static async storeOTP(
+    phoneNumber: string,
+    code: string,
+    purpose: 'login' | 'registration' | 'password_reset' = 'login'
+  ): Promise<GeneratedOTP> {
+    const config = await this.getConfig();
+
+    // Calculate expiration time
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + config.expiry_minutes);
+
+    const generatedOTP: GeneratedOTP = {
+      code,
+      expiresAt,
+      phoneNumber,
+      purpose
+    };
+
+    // Store OTP for verification
+    otpStore.set(phoneNumber, { otp: generatedOTP, attempts: 0 });
+
+    console.log(`📱 Demo OTP stored for ${phoneNumber}: ${code} (expires: ${expiresAt.toISOString()})`);
+    console.log(`📦 OTP Store size: ${otpStore.size}`);
+
+    return generatedOTP;
+  }
 }
 
 /**

@@ -39,15 +39,16 @@ export default function RestaurantSetupPage() {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
 
-        if (payload.role !== 'admin') {
+        // Accept both 'admin' and 'business_admin' as valid roles for restaurant setup
+        if (payload.role !== 'admin' && payload.role !== 'business_admin') {
           setRoleError(
-            payload.role === 'staff'
+            payload.role === 'staff' || payload.role === 'employee'
               ? 'Staff members cannot create restaurants. Only restaurant admins can set up new restaurants.'
               : 'Invalid role. Only restaurant admins can create restaurants.'
           );
           setTimeout(() => {
             // Redirect staff to their appropriate onboarding
-            if (payload.role === 'staff') {
+            if (payload.role === 'staff' || payload.role === 'employee') {
               router.push('/onboarding/staff-welcome');
             } else {
               router.push('/auth/role-selection');

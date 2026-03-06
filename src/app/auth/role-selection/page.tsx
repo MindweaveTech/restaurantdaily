@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChefHat, Users, Building2, ArrowRight, Crown, UserCheck } from 'lucide-react';
+import { ChefHat, Users, Building2, ArrowRight, Crown, UserCheck, Shield } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export default function RoleSelectionPage() {
@@ -17,7 +18,6 @@ export default function RoleSelectionPage() {
       const token = localStorage.getItem('auth_token');
 
       if (!token) {
-        console.log('No auth token found, redirecting to login');
         router.push('/auth/phone');
         return;
       }
@@ -28,7 +28,6 @@ export default function RoleSelectionPage() {
         const currentTime = Math.floor(Date.now() / 1000);
 
         if (payload.exp < currentTime) {
-          console.log('Token expired, redirecting to login');
           localStorage.removeItem('auth_token');
           router.push('/auth/phone');
           return;
@@ -37,7 +36,6 @@ export default function RoleSelectionPage() {
         // Token is valid
         setValidatingSession(false);
       } catch {
-        console.error('Invalid token format, redirecting to login');
         localStorage.removeItem('auth_token');
         router.push('/auth/phone');
       }
@@ -59,6 +57,9 @@ export default function RoleSelectionPage() {
       // Update user role in backend
       const authToken = localStorage.getItem('auth_token');
 
+      // Map frontend role names to API role names
+      const apiRole = selectedRole === 'admin' ? 'business_admin' : 'employee';
+
       const response = await fetch('/api/auth/update-role', {
         method: 'POST',
         headers: {
@@ -66,7 +67,7 @@ export default function RoleSelectionPage() {
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          role: selectedRole,
+          role: apiRole,
         }),
       });
 
@@ -93,47 +94,35 @@ export default function RoleSelectionPage() {
           router.push('/onboarding/staff-welcome');
         }
       } else {
-        console.error('Failed to update role:', data.error);
-
         // If the error is authentication-related, redirect to login
         if (response.status === 401) {
-          console.log('Authentication failed, redirecting to login');
           localStorage.removeItem('auth_token');
           router.push('/auth/phone');
           return;
         }
 
-        // For other errors, continue anyway for now but log the issue
-        console.warn('Role update failed but continuing with flow');
-        // Try to check existing token for restaurant info even on error
-        const currentToken = localStorage.getItem('auth_token');
-        const currentPayload = currentToken ? JSON.parse(atob(currentToken.split('.')[1])) : null;
+        // If employee needs invitation, show error and don't proceed
+        if (response.status === 403 && selectedRole === 'staff') {
+          alert(data.error || 'Staff members must be invited by a restaurant administrator.');
+          setLoading(false);
+          return;
+        }
 
+        // For admins, allow them to proceed to create a restaurant
         if (selectedRole === 'admin') {
-          if (currentPayload?.restaurant_id && currentPayload?.restaurant_name) {
-            router.push('/dashboard/admin');
-          } else {
-            router.push('/onboarding/restaurant-setup');
-          }
+          router.push('/onboarding/restaurant-setup');
         } else {
-          router.push('/onboarding/staff-welcome');
+          // Staff without invitation - show error
+          alert(data.error || 'Unable to proceed. Please contact your administrator.');
         }
       }
-    } catch (error) {
-      console.error('Role selection error:', error);
-      // Continue anyway for now - we can handle this gracefully
-      // Try to check existing token for restaurant info
-      const currentToken = localStorage.getItem('auth_token');
-      const currentPayload = currentToken ? JSON.parse(atob(currentToken.split('.')[1])) : null;
-
+    } catch {
+      // For admins, allow them to proceed to create a restaurant
       if (selectedRole === 'admin') {
-        if (currentPayload?.restaurant_id && currentPayload?.restaurant_name) {
-          router.push('/dashboard/admin');
-        } else {
-          router.push('/onboarding/restaurant-setup');
-        }
+        router.push('/onboarding/restaurant-setup');
       } else {
-        router.push('/onboarding/staff-welcome');
+        // Staff without successful API call - show error
+        alert('Unable to connect. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -143,254 +132,290 @@ export default function RoleSelectionPage() {
   // Show loading screen while validating session
   if (validatingSession) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Validating session...</p>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="animated-bg">
+          <div className="gradient-orb orb-1" />
+          <div className="gradient-orb orb-2" />
+          <div className="gradient-orb orb-3" />
+          <div className="gradient-orb orb-4" />
+          <div className="gradient-orb orb-5" />
+          <div className="noise-overlay" />
+          <div className="grid-overlay" />
+        </div>
+
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="glass-card p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-white/30 border-t-orange-500 mx-auto mb-4" />
+            <p className="text-white/60">Validating session...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <ChefHat className="h-8 w-8 text-orange-600 mr-3" />
-            <span className="text-2xl font-bold text-gray-800">Restaurant Daily</span>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="animated-bg">
+        <div className="gradient-orb orb-1" />
+        <div className="gradient-orb orb-2" />
+        <div className="gradient-orb orb-3" />
+        <div className="gradient-orb orb-4" />
+        <div className="gradient-orb orb-5" />
+        <div className="noise-overlay" />
+        <div className="grid-overlay" />
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        <div className="container mx-auto px-4 py-6 sm:py-8 max-w-2xl flex-1 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.svg"
+                alt="Restaurant Daily"
+                width={32}
+                height={32}
+                className="w-8 h-8"
+              />
+              <span className="text-lg font-semibold text-white">Restaurant Daily</span>
+            </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to Restaurant Daily!
-          </h1>
+          {/* Main Card */}
+          <div className="flex-1 flex items-center justify-center py-4">
+            <div className="glass-card w-full p-6 sm:p-8">
+              {/* Inner gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-amber-500/5 pointer-events-none rounded-3xl" />
 
-          <p className="text-lg text-gray-600 max-w-md mx-auto">
-            To get started, please let us know your role at the restaurant.
-          </p>
-        </div>
+              {/* Header Section */}
+              <div className="relative text-center mb-8">
+                <div className="flex justify-center mb-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-orange-500/20 blur-xl rounded-full" />
+                    <div className="relative p-3 bg-gradient-to-br from-orange-500/20 to-amber-500/10 rounded-2xl border border-orange-500/20">
+                      <Crown className="h-8 w-8 text-orange-400" />
+                    </div>
+                  </div>
+                </div>
 
-        {/* Role Selection Cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Restaurant Admin */}
-          <div
-            onClick={() => handleRoleSelect('admin')}
-            className={cn(
-              'bg-white rounded-xl shadow-lg border-2 cursor-pointer transition-all duration-300',
-              'hover:shadow-xl hover:scale-105 p-6',
-              selectedRole === 'admin'
-                ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
-                : 'border-gray-200 hover:border-orange-300'
-            )}
-          >
-            <div className="text-center">
-              {/* Icon */}
-              <div className={cn(
-                'mx-auto mb-4 p-4 rounded-full',
-                selectedRole === 'admin'
-                  ? 'bg-orange-100'
-                  : 'bg-gray-100'
-              )}>
-                <Crown className={cn(
-                  'h-12 w-12',
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                  Choose Your Role
+                </h1>
+                <p className="text-white/60 text-sm sm:text-base">
+                  Select how you&apos;ll be using Restaurant Daily
+                </p>
+              </div>
+
+              {/* Role Selection Cards */}
+              <div className="relative grid sm:grid-cols-2 gap-4 mb-6">
+                {/* Restaurant Admin */}
+                <div
+                  onClick={() => handleRoleSelect('admin')}
+                  className={cn(
+                    'relative p-5 rounded-2xl cursor-pointer transition-all duration-300',
+                    'border-2 backdrop-blur-sm',
+                    selectedRole === 'admin'
+                      ? 'bg-orange-500/10 border-orange-500/50 shadow-lg shadow-orange-500/10'
+                      : 'bg-white/5 border-white/10 hover:border-orange-500/30 hover:bg-white/10'
+                  )}
+                >
+                  <div className="text-center">
+                    {/* Icon */}
+                    <div className={cn(
+                      'mx-auto mb-3 p-3 rounded-xl w-fit',
+                      selectedRole === 'admin'
+                        ? 'bg-orange-500/20'
+                        : 'bg-white/10'
+                    )}>
+                      <Crown className={cn(
+                        'h-8 w-8',
+                        selectedRole === 'admin'
+                          ? 'text-orange-400'
+                          : 'text-white/60'
+                      )} />
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      Restaurant Admin
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-white/50 mb-3 text-xs leading-relaxed">
+                      Create your restaurant profile, invite staff, and manage operations.
+                    </p>
+
+                    {/* Features */}
+                    <div className="space-y-1.5 text-left">
+                      <div className="flex items-center text-xs text-white/70">
+                        <Building2 className="h-3.5 w-3.5 text-orange-400 mr-2 flex-shrink-0" />
+                        Set up restaurant profile
+                      </div>
+                      <div className="flex items-center text-xs text-white/70">
+                        <Users className="h-3.5 w-3.5 text-orange-400 mr-2 flex-shrink-0" />
+                        Invite and manage staff
+                      </div>
+                      <div className="flex items-center text-xs text-white/70">
+                        <ChefHat className="h-3.5 w-3.5 text-orange-400 mr-2 flex-shrink-0" />
+                        Full access to features
+                      </div>
+                    </div>
+
+                    {/* Selection indicator */}
+                    {selectedRole === 'admin' && (
+                      <div className="mt-3 flex items-center justify-center text-orange-400">
+                        <UserCheck className="h-4 w-4 mr-1.5" />
+                        <span className="text-sm font-medium">Selected</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Staff Member */}
+                <div
+                  onClick={() => handleRoleSelect('staff')}
+                  className={cn(
+                    'relative p-5 rounded-2xl cursor-pointer transition-all duration-300',
+                    'border-2 backdrop-blur-sm',
+                    selectedRole === 'staff'
+                      ? 'bg-blue-500/10 border-blue-500/50 shadow-lg shadow-blue-500/10'
+                      : 'bg-white/5 border-white/10 hover:border-blue-500/30 hover:bg-white/10'
+                  )}
+                >
+                  <div className="text-center">
+                    {/* Icon */}
+                    <div className={cn(
+                      'mx-auto mb-3 p-3 rounded-xl w-fit',
+                      selectedRole === 'staff'
+                        ? 'bg-blue-500/20'
+                        : 'bg-white/10'
+                    )}>
+                      <Users className={cn(
+                        'h-8 w-8',
+                        selectedRole === 'staff'
+                          ? 'text-blue-400'
+                          : 'text-white/60'
+                      )} />
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      Staff Member
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-white/50 mb-3 text-xs leading-relaxed">
+                      Join your restaurant team for daily operations tracking.
+                    </p>
+
+                    {/* Features */}
+                    <div className="space-y-1.5 text-left">
+                      <div className="flex items-center text-xs text-white/70">
+                        <ChefHat className="h-3.5 w-3.5 text-blue-400 mr-2 flex-shrink-0" />
+                        Track daily operations
+                      </div>
+                      <div className="flex items-center text-xs text-white/70">
+                        <Building2 className="h-3.5 w-3.5 text-blue-400 mr-2 flex-shrink-0" />
+                        Cash sessions & vouchers
+                      </div>
+                      <div className="flex items-center text-xs text-white/70">
+                        <Users className="h-3.5 w-3.5 text-blue-400 mr-2 flex-shrink-0" />
+                        Team collaboration
+                      </div>
+                    </div>
+
+                    {/* Selection indicator */}
+                    {selectedRole === 'staff' && (
+                      <div className="mt-3 flex items-center justify-center text-blue-400">
+                        <UserCheck className="h-4 w-4 mr-1.5" />
+                        <span className="text-sm font-medium">Selected</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Continue Button */}
+              <button
+                onClick={handleContinue}
+                disabled={!selectedRole || loading}
+                className={cn(
+                  'relative w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-base mb-4',
+                  'transition-all duration-300 overflow-hidden',
+                  'focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:ring-offset-2 focus:ring-offset-[#050510]',
+                  selectedRole && !loading
+                    ? selectedRole === 'admin'
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5 active:scale-[0.98]'
+                      : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-[0.98]'
+                    : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10'
+                )}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                    <span>Setting up...</span>
+                  </>
+                ) : selectedRole ? (
+                  <>
+                    <span>Continue as {selectedRole === 'admin' ? 'Admin' : 'Staff'}</span>
+                    <ArrowRight className="h-5 w-5" />
+                  </>
+                ) : (
+                  <>
+                    <span>Select your role to continue</span>
+                    <ArrowRight className="h-5 w-5 opacity-50" />
+                  </>
+                )}
+              </button>
+
+              {/* Role Info */}
+              {selectedRole && (
+                <div className={cn(
+                  'relative p-3 rounded-xl border text-center',
                   selectedRole === 'admin'
-                    ? 'text-orange-600'
-                    : 'text-gray-600'
-                )} />
-              </div>
-
-              {/* Title */}
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Restaurant Admin
-              </h3>
-
-              {/* Description */}
-              <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                I own or manage a restaurant and want to create my restaurant profile,
-                invite staff members, and have full administrative control.
-              </p>
-
-              {/* Important Notice */}
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
-                <p className="text-xs text-orange-800 font-medium">
-                  ⚠️ Choose this if you need to CREATE a new restaurant
-                </p>
-              </div>
-
-              {/* Features */}
-              <div className="space-y-2 text-left">
-                <div className="flex items-center text-sm text-gray-700">
-                  <Building2 className="h-4 w-4 text-orange-500 mr-2 flex-shrink-0" />
-                  Set up restaurant profile
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <Users className="h-4 w-4 text-orange-500 mr-2 flex-shrink-0" />
-                  Invite and manage staff
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <ChefHat className="h-4 w-4 text-orange-500 mr-2 flex-shrink-0" />
-                  Full access to all features
-                </div>
-              </div>
-
-              {/* Selection indicator */}
-              {selectedRole === 'admin' && (
-                <div className="mt-4 flex items-center justify-center text-orange-600">
-                  <UserCheck className="h-5 w-5 mr-2" />
-                  <span className="font-medium">Selected</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Staff Member */}
-          <div
-            onClick={() => handleRoleSelect('staff')}
-            className={cn(
-              'bg-white rounded-xl shadow-lg border-2 cursor-pointer transition-all duration-300',
-              'hover:shadow-xl hover:scale-105 p-6',
-              selectedRole === 'staff'
-                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                : 'border-gray-200 hover:border-blue-300'
-            )}
-          >
-            <div className="text-center">
-              {/* Icon */}
-              <div className={cn(
-                'mx-auto mb-4 p-4 rounded-full',
-                selectedRole === 'staff'
-                  ? 'bg-blue-100'
-                  : 'bg-gray-100'
-              )}>
-                <Users className={cn(
-                  'h-12 w-12',
-                  selectedRole === 'staff'
-                    ? 'text-blue-600'
-                    : 'text-gray-600'
-                )} />
-              </div>
-
-              {/* Title */}
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Staff Member
-              </h3>
-
-              {/* Description */}
-              <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                I work at a restaurant and was invited by my manager to join
-                the team for daily operations tracking.
-              </p>
-
-              {/* Important Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-xs text-blue-800 font-medium">
-                  ℹ️ Staff members cannot create restaurants - join existing ones
-                </p>
-              </div>
-
-              {/* Features */}
-              <div className="space-y-2 text-left">
-                <div className="flex items-center text-sm text-gray-700">
-                  <ChefHat className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" />
-                  Track daily operations
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <Building2 className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" />
-                  Cash sessions & vouchers
-                </div>
-                <div className="flex items-center text-sm text-gray-700">
-                  <Users className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" />
-                  Team collaboration
-                </div>
-              </div>
-
-              {/* Selection indicator */}
-              {selectedRole === 'staff' && (
-                <div className="mt-4 flex items-center justify-center text-blue-600">
-                  <UserCheck className="h-5 w-5 mr-2" />
-                  <span className="font-medium">Selected</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Continue Button */}
-        <div className="text-center">
-          <button
-            onClick={handleContinue}
-            disabled={!selectedRole || loading}
-            className={cn(
-              'px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center mx-auto',
-              'transition-all duration-200 shadow-md min-w-[200px]',
-              'focus:outline-none focus:ring-2 focus:ring-offset-2',
-              selectedRole && !loading
-                ? selectedRole === 'admin'
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl focus:ring-orange-500'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl focus:ring-blue-500'
-                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-            )}
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
-                Setting up...
-              </>
-            ) : selectedRole ? (
-              <>
-                Continue as {selectedRole === 'admin' ? 'Admin' : 'Staff Member'}
-                <ArrowRight className="h-5 w-5 ml-3" />
-              </>
-            ) : (
-              <>
-                Select your role to continue
-                <ArrowRight className="h-5 w-5 ml-3 opacity-50" />
-              </>
-            )}
-          </button>
-
-          {selectedRole && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 mb-3">
-                {selectedRole === 'admin'
-                  ? "As a Restaurant Admin, you'll be able to create your restaurant profile and invite team members"
-                  : "As Staff, you'll join an existing restaurant team for daily operations tracking"
-                }
-              </p>
-
-              {selectedRole === 'admin' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-xs text-green-800">
-                    ✅ This role allows you to create new restaurants
+                    ? 'bg-orange-500/5 border-orange-500/20'
+                    : 'bg-blue-500/5 border-blue-500/20'
+                )}>
+                  <p className={cn(
+                    'text-xs',
+                    selectedRole === 'admin' ? 'text-orange-300' : 'text-blue-300'
+                  )}>
+                    {selectedRole === 'admin'
+                      ? '✓ You can create new restaurants and invite team members'
+                      : '⚠ Staff members need an invitation to join a restaurant'
+                    }
                   </p>
                 </div>
               )}
 
-              {selectedRole === 'staff' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-xs text-yellow-800">
-                    ⚠️ Staff cannot create restaurants - only join existing ones
-                  </p>
+              {/* Help Section */}
+              <div className="relative mt-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex items-start gap-3">
+                  <div className="p-1.5 bg-orange-500/10 rounded-lg shrink-0">
+                    <Shield className="h-4 w-4 text-orange-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-white/80 mb-1">Need help?</h4>
+                    <p className="text-xs text-white/40 leading-relaxed">
+                      <strong className="text-white/60">Admin:</strong> Own/manage a restaurant and need to set it up.
+                      <br />
+                      <strong className="text-white/60">Staff:</strong> Work at a restaurant that&apos;s already set up.
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Help Text */}
-        <div className="mt-12 text-center">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-md mx-auto">
-            <h4 className="font-medium text-gray-800 mb-2">Need help choosing?</h4>
-            <div className="text-sm text-gray-600 space-y-2 text-left">
-              <p><strong>Choose Admin if:</strong> You own/manage a restaurant and need to set it up</p>
-              <p><strong>Choose Staff if:</strong> You work at a restaurant that&apos;s already set up</p>
+              </div>
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 mt-4">
-            You can contact support if you need to change your role later.
-          </p>
+          {/* Footer */}
+          <div className="text-center py-4">
+            <p className="text-xs text-white/30">
+              You can contact support if you need to change your role later.
+            </p>
+          </div>
         </div>
       </div>
     </div>

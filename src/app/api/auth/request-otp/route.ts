@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { TwilioMessagingClient } from '@/lib/messaging/twilio-client';
 import { PhoneValidator } from '@/lib/messaging/phone-validator';
-import { OTPRateLimit } from '@/lib/messaging/otp-service';
+import { OTPRateLimit, OTPService } from '@/lib/messaging/otp-service';
 import { logAPI, logAuth } from '@/lib/logger';
+
+// Demo phone numbers for testing (bypasses real SMS)
+const DEMO_PHONES = [
+  '+11234567890',  // US demo
+  '+919999999999', // India demo
+  '+12025551234',  // US DC demo
+];
+const DEMO_OTP = '123456';
 
 // Request validation schema
 const requestOTPSchema = z.object({
@@ -70,7 +78,30 @@ export async function POST(request: NextRequest) {
     // Record the attempt
     OTPRateLimit.recordAttempt(formattedPhone);
 
-    // Send OTP via Twilio
+    // Check if this is a demo phone number (for development/testing)
+    const isDemoPhone = DEMO_PHONES.includes(formattedPhone);
+
+    if (isDemoPhone) {
+      // Store demo OTP for verification
+      await OTPService.storeOTP(formattedPhone, DEMO_OTP);
+      logAuth('otp-sent', formattedPhone, true, { method: 'demo', note: 'Demo mode - use OTP: 123456' });
+      logAPI('POST', '/api/auth/request-otp', 200, Date.now() - startTime);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Demo mode: Use OTP 123456',
+        data: {
+          phoneNumber: PhoneValidator.formatForDisplay(formattedPhone),
+          method: 'demo',
+          expiresIn: '5 minutes',
+          canResendIn: '1 minute',
+          isDemo: true,
+          demoOtp: '123456' // Only exposed for demo numbers
+        }
+      });
+    }
+
+    // Send OTP via Twilio (production)
     const messageResult = await TwilioMessagingClient.sendOTP({
       phoneNumber: formattedPhone,
       purpose,
@@ -101,7 +132,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: PhoneValidator.formatForDisplay(formattedPhone),
         method: messageResult.method,
         expiresIn: '5 minutes',
-        canResendIn: '1 minute' // Implement resend logic
+        canResendIn: '1 minute'
       }
     });
 

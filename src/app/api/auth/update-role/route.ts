@@ -164,38 +164,66 @@ export async function POST(request: NextRequest) {
           );
         }
       }
-    } else if (role === 'business_admin' || role === 'employee') {
-      // Legacy support: check for existing user in database
+    } else if (role === 'business_admin') {
+      // Freemium model: Allow self-registration as business_admin
+      // Check for existing user first
       try {
         const existingUser = await userService.getUserByPhone(decoded.phone);
         if (existingUser && existingUser.restaurant_id) {
-          // Map old roles to new roles (cast to string for comparison with legacy values)
+          // Existing user - use their current role and restaurant
           const userRole = existingUser.role as string;
           if (userRole === 'admin' || userRole === 'business_admin') {
             finalRole = 'business_admin';
-          } else if (userRole === 'staff' || userRole === 'team_member' || userRole === 'employee') {
-            finalRole = 'employee';
           } else if (userRole === 'superadmin') {
             finalRole = 'superadmin';
           } else {
-            // Default to the requested role
-            finalRole = role as UserRole;
+            finalRole = 'business_admin';
           }
           restaurantId = existingUser.restaurant_id;
           const restaurant = await restaurantService.getRestaurantById(restaurantId);
           restaurantName = restaurant?.name || null;
-          console.log(`✅ Existing user login: ${decoded.phone} as ${finalRole}`);
+          console.log(`✅ Existing business admin login: ${decoded.phone}`);
         } else {
-          // No invitation and no existing user - reject
+          // New user - allow self-registration as business_admin
+          // Restaurant will be created during onboarding
+          finalRole = 'business_admin';
+          restaurantId = null;
+          restaurantName = null;
+          console.log(`✅ New business admin registration: ${decoded.phone}`);
+        }
+      } catch (error) {
+        // If check fails, still allow registration
+        console.log('Check existing user failed, allowing new registration:', error);
+        finalRole = 'business_admin';
+        restaurantId = null;
+        restaurantName = null;
+      }
+    } else if (role === 'employee') {
+      // Employees must have an invitation or be existing users
+      try {
+        const existingUser = await userService.getUserByPhone(decoded.phone);
+        if (existingUser && existingUser.restaurant_id) {
+          const userRole = existingUser.role as string;
+          if (userRole === 'staff' || userRole === 'team_member' || userRole === 'employee') {
+            finalRole = 'employee';
+          } else {
+            finalRole = 'employee';
+          }
+          restaurantId = existingUser.restaurant_id;
+          const restaurant = await restaurantService.getRestaurantById(restaurantId);
+          restaurantName = restaurant?.name || null;
+          console.log(`✅ Existing employee login: ${decoded.phone}`);
+        } else {
+          // No invitation and no existing user - employees need invitation
           return NextResponse.json(
-            { error: 'You must have an invitation to register. Please contact an administrator.' },
+            { error: 'Employees must be invited by a restaurant administrator. Please ask your manager to send you an invitation.' },
             { status: 403 }
           );
         }
       } catch (error) {
-        console.log('Failed to check existing user:', error);
+        console.log('Failed to check existing employee:', error);
         return NextResponse.json(
-          { error: 'You must have an invitation to register. Please contact an administrator.' },
+          { error: 'Employees must be invited by a restaurant administrator. Please ask your manager to send you an invitation.' },
           { status: 403 }
         );
       }

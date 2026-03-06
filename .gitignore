@@ -56,3 +56,4 @@ logs/
 .screenshots/
 .playwright-mcp/
 *.png
+PLAN.md
